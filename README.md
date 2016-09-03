@@ -113,7 +113,7 @@ Two-steps: (1) processing full text as input to make template slots; (2) creatin
 - content planner: selects info to include in summary using input templates (kind of like extraction but you need to build a graph)
 - linguistic generator: selects the right words to express info in a grammatical way
 
-#### existing geneartors
+#### existing generators
 - FUF / SURGE system
 
 - summary operators : set of heuristic rules thst perform operations like
@@ -141,7 +141,7 @@ Two-steps: (1) processing full text as input to make template slots; (2) creatin
 	- combines query relevance and info novelty
 	- rewards relevant sentences and penalizes redundant ones 
 	- linear combo of 2 similarity measures
-	- lambda param to baalance relevance and redundancy (just a regularizer)
+	- lambda param to balance relevance and redundancy (just a regularizer)
 	-document w/ highest MMR is selected for summary; do this until minimum threshold is attained
 	- can shift lambdas in order to get what the user wants
 	- requires a query Q s.t. different user with different profile generates a different summary
@@ -183,3 +183,28 @@ Two-steps: (1) processing full text as input to make template slots; (2) creatin
 		- first-sentence overlap (inner pdt between word occurrence vector and firest setence)
 	- final score = combo of 3 scores + redundancy penalty for overlapping
 
+## knowledge-graph
+Instead of just looking at the link provided by the user, the AI should amass knowledge over time. After many uses, the algorithm should be able to prioritize the currently article but optionally supplant it with information from previously read articles to give a holistic point of view. 
+
+To prevent this from exploding unintentionally, similar to the graph used in activation summarization, it is necessary to create a graph of article similarities. This may be an extension to the already existing graph but it could also be a separate instance.  
+
+A centroid-based organization may be good. Or we also do a graph-spreading but not on words but documents, it may be good. 
+
+From there, if you do BFS on a graph, then the subset of nodes (docs) can be used in a multi-document abstraction problem. 
+
+## question & answer system
+An interesting feature of this system is the ability to answer questions about the summarized article. (In the future, this should be answer questions about anything). 
+
+Required additional algorithms:
+
+- Given an question, parse it for a semantic structure. A question should be analyzable as a small piece of text using the same graph algorithm.
+- Find the k-nearest neighbors to the question in our knowledge graph.
+- Form an answer ... this is different than form a summary but should share a similar procedure. Or we can view it as summarizing the relevant areas of the articles.
+
+## state-of-development
+
+- document graph (not started)
+- knowledge graph (not started)
+- q&a system (not started)
+- chrome extension (not started)
+- server (not started)
