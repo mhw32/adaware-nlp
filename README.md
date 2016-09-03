@@ -31,27 +31,27 @@ With the ability to convert data into a knowledge graph, the summarization tool 
 
 It sounds like we need abstraction-based and take advantage of ML/NLP algorithms to do this.
 
-### approaches
+### single-document extraction
 The very naive approach is to use keyphrase extraction with "metrics" like tf*idf, distance, spread, structure, wiki-measure, metadata as features in some supervised problem. 
 
 Topic-driven summarization: summary made based on a topic. Can we combine this in an unsupervised manner?
 
-### early work
+#### early work
 - sorted frequency of words
 - significance factor for # of occurrences within sentence to get linear distance between sentences
 - top significant sentences are used to form abstract
 - sentence position: aka topic sentence is first or last sentence
 - cue words aka "significant", "hardly"
 
-### datasets
+#### datasets
 - TREC dataset
 - CNN dataset
 - ROUGE-1 dataset
 
-### baseline models
+#### baseline models
 - take first n sentences of article
 
-### naive ML models
+#### naive ML models
 - naive bayes to pick the probability of each sentence being worthy of extraction
 	- assumes independence between features F1...Fk
 	- p(sentence|features) = prod(p(feature\_i|sentence)*p(sentence)) / prod(p(feature\_i))
@@ -68,7 +68,7 @@ Topic-driven summarization: summary made based on a topic. Can we combine this i
 	- weekday or month
 	- quotation
 
-### generative ML models
+#### generative ML models
 - learn local dependencies between sentences using HMM (i like this one)
 	- 3 features: position of sentence in doc, number of terms in sentence, likeliness of sentence terms given doc terms
 	- 2s+1 states: s summary states and s+1 nonsummary states
@@ -76,10 +76,10 @@ Topic-driven summarization: summary made based on a topic. Can we combine this i
 	- learn a transition matrix
 	- assumed features are multivariate normal
 
-### neural network models
+#### neural network models
 - RankNet: pair based nn to rank a set of inputs using sgd
 
-### deep nlp models
+#### deep nlp models
 - separation between learning semantic structure of text vs word statistics of document
 - not really ml, more using set of heuristics to create document extracts (i don't reall like this)
 	- lexical chain: sequence of related words (could be adjacent or long-distance)
@@ -98,3 +98,88 @@ Topic-driven summarization: summary made based on a topic. Can we combine this i
 		- segmentation
 		- candidate generation
 		- preference judgement
+
+### multi-document extraction
+Get a summary from multiple documents. More than 1 source of info that overlap and supplement each other. How to measure redundancy? How to recognize novelty? This would be pretty cool to do.
+
+- cluster similar sentences together. aka word2vec and then k-means. Select centroid to represent cluster. Or generate composite sentence from each cluster.
+
+- then just do it as a single doc extraction
+
+### abstraction
+
+Two-steps: (1) processing full text as input to make template slots; (2) creating a summary from extracted info.
+
+- content planner: selects info to include in summary using input templates (kind of like extraction but you need to build a graph)
+- linguistic generator: selects the right words to express info in a grammatical way
+
+#### existing geneartors
+- FUF / SURGE system
+
+- summary operators : set of heuristic rules thst perform operations like
+	- change of perspective
+	- contradiction
+	- refinement
+
+- hard to generalize this to large domains but we can solve this by only using select documents that are similar (knowledge graph)
+
+- identify themes (similar paragraphs)	
+	- text is mapped to vectors, single words are weighted by TF-IDF scores, noun, proper noun, synsets from Wordnet
+	- vector for each pair of paragraphs
+	- decide if pairs are similar or dissimilar
+	- end up with similar paragraphs in themes
+- information fusion
+	- which sentences of a theme should be included
+		- Collins' statistical parser
+		- put into dependency trees (predicate-arg)
+		- drop determiners and auxiliaries
+- FUF/SURGE
+	- generate grammatical text 
+
+### topic-driven summarization
+- maximal marginal relvance (MMR)
+	- combines query relevance and info novelty
+	- rewards relevant sentences and penalizes redundant ones 
+	- linear combo of 2 similarity measures
+	- lambda param to baalance relevance and redundancy (just a regularizer)
+	-document w/ highest MMR is selected for summary; do this until minimum threshold is attained
+	- can shift lambdas in order to get what the user wants
+	- requires a query Q s.t. different user with different profile generates a different summary
+
+### graph-spreading activation
+- no textual summary is generated but summary content is represented as nodes and edges.
+- I think this is what we want
+- detect salient regions of a graph 
+	- topic is a set of entry nodes
+	- convert document into graph: each node represents occurrence of a single word
+	- each node has several links:
+		- adjacency links to adjacent words in text 
+		- same links to other occurrences of the same word
+		- alpha links encoding semantic relationships using WordNet
+		- phrase links tie together sequences of adjacent nodes that are in the same phrase
+		- name / coref links for co-referential name occurrences
+	- find topic nodes using stem comparison (these become the entry nodes)
+	- search for semantically related text using BFS (spreading activation)
+	- salient word and phrases initialized using TF-IDF score
+	- weight of neighboring nodes dependent on the node link travelled and is exponentially decaying based on distance of path
+	- travelling within a sentence is cheaper than across sentences, which is cheaper than across paragraphs
+	- Given two documents, common nodes are identified
+		- for each sentence, get a score for avg weight of common nodes and a score for average weights of difference nodes
+		- sentences with higher common and different scores are highlighted. 
+		- compose abstractive summaries using these nodes (something we can do)
+
+### centroid-based summary
+- MEAD system
+- no language generation module; only uses bags-of-words; domain-independent
+	- topic detection: group together news articles that describe the same event
+		- cluster of TF-IDF vector representations of documents (and keep track of centroids): this is basically KNN
+	- use centroids to find sentences in each cluster that are important to the topic of that cluster
+		- CBRU (cluster-based relative utility): how relevant a sentence is to topic of cluster
+		- CSIS (cross-sentence informational subsumption): measure of redundancy
+		- these two metrics are not query-dependent (unlike MMR)!
+	- cluster C of docs segemented into n sentences with R compression rate gives us a sequence of nR sentences. 
+		- for each sentence, get centroid value (sum of centroid for all words in sentences)
+		- positional value (make leading setences more important)
+		- first-sentence overlap (inner pdt between word occurrence vector and firest setence)
+	- final score = combo of 3 scores + redundancy penalty for overlapping
+
