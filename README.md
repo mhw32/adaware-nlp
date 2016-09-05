@@ -222,5 +222,80 @@ This is a hard problem because punctuation is not perfect. There exist mistakes 
 We will be using SATZ: adaptive sentence segmentation system (https://arxiv.org/pdf/cmp-lg/9503019.pdf)
 
 - normal way is everything is meant to be a period. This is 95% accurate.
-- the word before and after the punctuation point provides important information; also more context may be necessary
+	- this effectiveness depends on text genre
+	- the word before and after the punctuation point provides important information; also more context may be necessary
+- regular expressions and heuristic rules
+	- design a regular grammar with a lookahead: "period-space-capital letter". (Hardcode)
+	- exception lists
+	- abbreviation list
+	- large manual effort to compile rules
+- regression trees
+	- Breiman et. al. 1984 
+	- 99.8% error on corpus of AP newswire
+	- features:
+		- pr(word precedng "." occurs at end of sentence)
+		- pr(word following "." occurs at the beginning of sentence)
+		- length of word preceding "."
+		- length of word after "."
+		- case of word preceding "."
+		- case of word following "."
+		- punctuation after "." if any
+		- abbreviation class of words with "."
+- neural networks
+	- no hand-built grammar
+	- no capitalization dependency
+	- text genre independent
+	- context around punctuation mark with series of vectors of probabilities (prior part-of-speech probabilities from lexicon)
+	- passed into classifier (NN)
+	- output determines the role of the punctuation mark
+- SATZ
+	- tokenizer
+		- lexical analysis (input text --> tokens)
+		- end up with either a sequence of alphabetic chars, a sequence of digits, or a single non-alphanumeric char (like "." or "?")
+	- part-of-speech lookup
+		- context approximated by a single part-of-speech for each of N words around punctuation
+		- but part-of-speech tagging requires sentence boundaries
+			- each word in context = series of possible parts-of-speech
+			- probabilities based on occurrences of words in a pre-tagged corpus
+		- lexicon 
+			- data set to produce the prior probabilities
+			- returns counts for a word being used as an adj, noun, qualifier, adverb, interjection, verb
+			- what dataset to use?
+		- unknown words
+			- unknown tokens containing digit is a number
+			-  any token beginning with a ".", "?", "!" is assigned a end-of-sentence punctuation. 
+			- common morphological endings are given the part-of-speech is assigned to assigned to whole thing
+			- words with hyphen are known as "unknown hyphenated word"
+			- words with internal period are abbreviations
+			- capitalized words have fixed pr of being a proper noun (0.9)
+			- capitalized words in lexicon but not registered as proper noun = 0.5 for being a proper noun
+			- last resort, uniform frequency across tags
+	- descriptor array 
+		- lexicon may contain 70/80 very specific parts-of-speech, make more general categories into 18
+			- ex) combine tense verb, modal verb into a verb category
+		- counts --> frequency
+		- two additional flags if word begins with capital letter and if it follows a punctuation mark
+		- total 20 items
+	- classification
+		- fully-connected feed-forward (1 layer)
+		- k*20 input units; k is the number of words of context around an end-of-sentence punctuation
+		- j hidden units with sigmoid activation
+		- one output unit (0 to 1) that is the probability of the punctuation mark occuring in the context
+		- if pr < t\_0, not a sentence boundary
+		- if pr >= t\_1, it is a boundary
+		- in between = do something else later
+		- if t\_0 = t\_1, all are boundaries
+		- window of k+1 tokens: first k/2 and final k/2 tokens represent context for middle token (??? don't get this pg12). I think it just means the context is the surrounding k/2 on both ends
+	- experiment
+		- wall street journal of ACL/DCI collection
+		- 573 training set, 258 validation set, 27,294 test set
+		- PARTS tagger (Brown corpus) for lexicon 
+			- Francis and Kucera, 1982
+		- cost function = least mean squares error
+		- 6 token context
+		- 2 hidden units (tooo few)
+		- t\_0 and t\_1 set to 0.5
+		- robust to upper/lower case
+		- lexicon size 30,000 words from PARTS tagger
+
 
