@@ -297,5 +297,6 @@ We will be using SATZ: adaptive sentence segmentation system (https://arxiv.org/
 		- t\_0 and t\_1 set to 0.5
 		- robust to upper/lower case
 		- lexicon size 30,000 words from PARTS tagger
-
+	- BROWN dataset
+		- 500 samples of english-language text (roughly 1 million words)
 
