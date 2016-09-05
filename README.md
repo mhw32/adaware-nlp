@@ -207,4 +207,20 @@ Required additional algorithms:
 - knowledge graph (not started)
 - q&a system (not started)
 - chrome extension (not started)
-- server (not started)
+- server (not started)zx
+
+## building document graphs
+1. sentence boundary disambiguator
+2. part-of-speech tagger
+3. name (relationship) extraction
+4. phrase extraction
+5. alpha link extraction
+
+### sentence boundary disambiguator
+This is a hard problem because punctuation is not perfect. There exist mistakes and also multiple intentions behind punctuations. We need a smarter way of doing sentence splitting rather than using a period. 
+
+We will be using SATZ: adaptive sentence segmentation system (https://arxiv.org/pdf/cmp-lg/9503019.pdf)
+
+- normal way is everything is meant to be a period. This is 95% accurate.
+- the word before and after the punctuation point provides important information; also more context may be necessary
+
