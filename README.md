@@ -299,4 +299,6 @@ We will be using SATZ: adaptive sentence segmentation system (https://arxiv.org/
 		- lexicon size 30,000 words from PARTS tagger
 	- BROWN dataset
 		- 500 samples of english-language text (roughly 1 million words)
+		- free and also found in nltk
+	
 
