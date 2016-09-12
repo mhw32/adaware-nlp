@@ -1,11 +1,15 @@
 # smart-summary
 
-Goal of this app is given a piece of text, image, or video, extract information, and output a summarized version. By doing so, the algorithm should produce a knowledge graph where the user can ask more questions about the text. 
+Goal of this app is given a piece of text, image, or video, extract information, and output a summarized version. By doing so, the algorithm should produce a knowledge graph where the user can ask more questions about the text.
 
-Knowledge graphs should be shared between users into (multiple or single) graphs. The algorithm can then draw on more information to provide the user additional informations. 
+Knowledge graphs should be shared between users into (multiple or single) graphs. The algorithm can then draw on more information to provide the user additional informations.
 
 ## vision
-With the ability to convert data into a knowledge graph, the summarization tool is only a start. The larger goal is to convert the algorithm into a AI/ML based frontend for the web. Instead of googling things, you just ask questions and receive answers (more "ergonomic" approach.
+With the ability to convert data into a knowledge graph, the summarization tool is only a start. The larger goal is to convert the algorithm into a AI/ML based frontend for the web. Instead of googling things, you just ask questions and receive answers (more "ergonomic") approach.
+
+**Step 1 :** a chrome extension that you can query.
+**Step 2 :** a browser that isn't really a browser. It's just a AI that you can chat with to surf the semantic web.
+**Step 3:** an operating system that basically the one from the movie "Her".
 
 ## technical pieces
 - Text analysis
@@ -13,7 +17,7 @@ With the ability to convert data into a knowledge graph, the summarization tool 
 	- Learn the high dimensional space that text lies in
 	- Convert the features into a knowledge graph (unsupervised clustering possibly)
 	- Summarization
-- App 
+- App
 	- Chrome Extension
 	- Server to store the knowledge graph (try neo4j)
 	- Get
@@ -21,7 +25,7 @@ With the ability to convert data into a knowledge graph, the summarization tool 
 ## summarization
 1. Extraction-based
 	 - Gets objects w/o modifying them
-	 - Keyphrase extraction: select individual raw words/phrases 
+	 - Keyphrase extraction: select individual raw words/phrases
 2. Abstraction-based
 	- Same as extraction but paraphrases sections
 	- Condenses text better but harder
@@ -32,7 +36,7 @@ With the ability to convert data into a knowledge graph, the summarization tool 
 It sounds like we need abstraction-based and take advantage of ML/NLP algorithms to do this.
 
 ### single-document extraction
-The very naive approach is to use keyphrase extraction with "metrics" like tf*idf, distance, spread, structure, wiki-measure, metadata as features in some supervised problem. 
+The very naive approach is to use keyphrase extraction with "metrics" like tf*idf, distance, spread, structure, wiki-measure, metadata as features in some supervised problem.
 
 Topic-driven summarization: summary made based on a topic. Can we combine this in an unsupervised manner?
 
@@ -123,7 +127,7 @@ Two-steps: (1) processing full text as input to make template slots; (2) creatin
 
 - hard to generalize this to large domains but we can solve this by only using select documents that are similar (knowledge graph)
 
-- identify themes (similar paragraphs)	
+- identify themes (similar paragraphs)
 	- text is mapped to vectors, single words are weighted by TF-IDF scores, noun, proper noun, synsets from Wordnet
 	- vector for each pair of paragraphs
 	- decide if pairs are similar or dissimilar
@@ -134,12 +138,12 @@ Two-steps: (1) processing full text as input to make template slots; (2) creatin
 		- put into dependency trees (predicate-arg)
 		- drop determiners and auxiliaries
 - FUF/SURGE
-	- generate grammatical text 
+	- generate grammatical text
 
 ### topic-driven summarization
 - maximal marginal relvance (MMR)
 	- combines query relevance and info novelty
-	- rewards relevant sentences and penalizes redundant ones 
+	- rewards relevant sentences and penalizes redundant ones
 	- linear combo of 2 similarity measures
 	- lambda param to balance relevance and redundancy (just a regularizer)
 	-document w/ highest MMR is selected for summary; do this until minimum threshold is attained
@@ -149,11 +153,11 @@ Two-steps: (1) processing full text as input to make template slots; (2) creatin
 ### graph-spreading activation
 - no textual summary is generated but summary content is represented as nodes and edges.
 - I think this is what we want
-- detect salient regions of a graph 
+- detect salient regions of a graph
 	- topic is a set of entry nodes
 	- convert document into graph: each node represents occurrence of a single word
 	- each node has several links:
-		- adjacency links to adjacent words in text 
+		- adjacency links to adjacent words in text
 		- same links to other occurrences of the same word
 		- alpha links encoding semantic relationships using WordNet
 		- phrase links tie together sequences of adjacent nodes that are in the same phrase
@@ -165,7 +169,7 @@ Two-steps: (1) processing full text as input to make template slots; (2) creatin
 	- travelling within a sentence is cheaper than across sentences, which is cheaper than across paragraphs
 	- Given two documents, common nodes are identified
 		- for each sentence, get a score for avg weight of common nodes and a score for average weights of difference nodes
-		- sentences with higher common and different scores are highlighted. 
+		- sentences with higher common and different scores are highlighted.
 		- compose abstractive summaries using these nodes (something we can do)
 
 ### centroid-based summary
@@ -177,23 +181,23 @@ Two-steps: (1) processing full text as input to make template slots; (2) creatin
 		- CBRU (cluster-based relative utility): how relevant a sentence is to topic of cluster
 		- CSIS (cross-sentence informational subsumption): measure of redundancy
 		- these two metrics are not query-dependent (unlike MMR)!
-	- cluster C of docs segemented into n sentences with R compression rate gives us a sequence of nR sentences. 
+	- cluster C of docs segemented into n sentences with R compression rate gives us a sequence of nR sentences.
 		- for each sentence, get centroid value (sum of centroid for all words in sentences)
 		- positional value (make leading setences more important)
 		- first-sentence overlap (inner pdt between word occurrence vector and firest setence)
 	- final score = combo of 3 scores + redundancy penalty for overlapping
 
 ## knowledge-graph
-Instead of just looking at the link provided by the user, the AI should amass knowledge over time. After many uses, the algorithm should be able to prioritize the currently article but optionally supplant it with information from previously read articles to give a holistic point of view. 
+Instead of just looking at the link provided by the user, the AI should amass knowledge over time. After many uses, the algorithm should be able to prioritize the currently article but optionally supplant it with information from previously read articles to give a holistic point of view.
 
-To prevent this from exploding unintentionally, similar to the graph used in activation summarization, it is necessary to create a graph of article similarities. This may be an extension to the already existing graph but it could also be a separate instance.  
+To prevent this from exploding unintentionally, similar to the graph used in activation summarization, it is necessary to create a graph of article similarities. This may be an extension to the already existing graph but it could also be a separate instance.
 
-A centroid-based organization may be good. Or we also do a graph-spreading but not on words but documents, it may be good. 
+A centroid-based organization may be good. Or we also do a graph-spreading but not on words but documents, it may be good.
 
-From there, if you do BFS on a graph, then the subset of nodes (docs) can be used in a multi-document abstraction problem. 
+From there, if you do BFS on a graph, then the subset of nodes (docs) can be used in a multi-document abstraction problem.
 
 ## question & answer system
-An interesting feature of this system is the ability to answer questions about the summarized article. (In the future, this should be answer questions about anything). 
+An interesting feature of this system is the ability to answer questions about the summarized article. (In the future, this should be answer questions about anything).
 
 Required additional algorithms:
 
@@ -217,7 +221,7 @@ Required additional algorithms:
 5. alpha link extraction
 
 ### sentence boundary disambiguator
-This is a hard problem because punctuation is not perfect. There exist mistakes and also multiple intentions behind punctuations. We need a smarter way of doing sentence splitting rather than using a period. 
+This is a hard problem because punctuation is not perfect. There exist mistakes and also multiple intentions behind punctuations. We need a smarter way of doing sentence splitting rather than using a period.
 
 We will be using SATZ: adaptive sentence segmentation system (https://arxiv.org/pdf/cmp-lg/9503019.pdf)
 
@@ -230,7 +234,7 @@ We will be using SATZ: adaptive sentence segmentation system (https://arxiv.org/
 	- abbreviation list
 	- large manual effort to compile rules
 - regression trees
-	- Breiman et. al. 1984 
+	- Breiman et. al. 1984
 	- 99.8% error on corpus of AP newswire
 	- features:
 		- pr(word precedng "." occurs at end of sentence)
@@ -257,20 +261,20 @@ We will be using SATZ: adaptive sentence segmentation system (https://arxiv.org/
 		- but part-of-speech tagging requires sentence boundaries
 			- each word in context = series of possible parts-of-speech
 			- probabilities based on occurrences of words in a pre-tagged corpus
-		- lexicon 
+		- lexicon
 			- data set to produce the prior probabilities
 			- returns counts for a word being used as an adj, noun, qualifier, adverb, interjection, verb
 			- what dataset to use?
 		- unknown words
 			- unknown tokens containing digit is a number
-			-  any token beginning with a ".", "?", "!" is assigned a end-of-sentence punctuation. 
+			-  any token beginning with a ".", "?", "!" is assigned a end-of-sentence punctuation.
 			- common morphological endings are given the part-of-speech is assigned to assigned to whole thing
 			- words with hyphen are known as "unknown hyphenated word"
 			- words with internal period are abbreviations
 			- capitalized words have fixed pr of being a proper noun (0.9)
 			- capitalized words in lexicon but not registered as proper noun = 0.5 for being a proper noun
 			- last resort, uniform frequency across tags
-	- descriptor array 
+	- descriptor array
 		- lexicon may contain 70/80 very specific parts-of-speech, make more general categories into 18
 			- ex) combine tense verb, modal verb into a verb category
 		- counts --> frequency
@@ -289,7 +293,7 @@ We will be using SATZ: adaptive sentence segmentation system (https://arxiv.org/
 	- experiment
 		- wall street journal of ACL/DCI collection
 		- 573 training set, 258 validation set, 27,294 test set
-		- PARTS tagger (Brown corpus) for lexicon 
+		- PARTS tagger (Brown corpus) for lexicon
 			- Francis and Kucera, 1982
 		- cost function = least mean squares error
 		- 6 token context
@@ -300,5 +304,5 @@ We will be using SATZ: adaptive sentence segmentation system (https://arxiv.org/
 	- BROWN dataset
 		- 500 samples of english-language text (roughly 1 million words)
 		- free and also found in nltk
-	
+
 
