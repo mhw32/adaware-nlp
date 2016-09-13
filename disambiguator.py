@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 '''
 Python implementation of SATZ, a sentence
 boundary disambiguator using a feed
@@ -21,6 +23,7 @@ import numpy as np
 import nltk
 import io
 import tokenize
+import cPickle
 
 # load in libraries for NN
 import autograd.numpy as np
@@ -32,13 +35,8 @@ from optimizers import adam
 
 
 def generate_tokens_from_string(text):
-    ''' wrapper for tokenizer.generate_tokens
-        returns a generator of 5 tuples
-        1. token type
-        2. token string
-        3. (srow, scol)
-        4. (erow, ecol)
-        5. line number
+    ''' wrapper for nltk.word_tokenize
+        returns a list of strings
 
         Args
         ----
@@ -51,6 +49,7 @@ def generate_tokens_from_string(text):
                  list of separated tokens
 
     '''
+    
     '''
     # manually do it
     string_io = io.StringIO(text)
@@ -65,7 +64,7 @@ def get_loc_in_array(value, array):
     find = np.where(array == value)
     if find.shape[0] > 0:
         return find[0][0]
-    return -1
+    raise RuntimeError("Couldn't find value: {} in array".format(value))
 
 
 def init_prior_pos_proba(
@@ -93,17 +92,20 @@ def init_prior_pos_proba(
     '''
     tag_counts = dict()
     if lexicon is None:
-        lexicon = cPickle.load(
-            open('storage/tagged_brown_corpus.pkl', 'rb'))
+        with open('storage/tagged_brown_corpus.pkl', 'rb') as f:
+            lexicon = cPickle.load(f)
 
     # get all tags (take only first part: 70 tags)
     tags_fd = nltk.FreqDist(
         tag for (word, tag) in lexicon)
     tags_lst = np.array(dict(tags_fd).keys())
     ''' three tags are added:
+        - PEP : possible end-of-sentence punctuation
         - UHW : unknown hyphenated word
         - ABR : abbreviation
     '''
+    # word_tokenize splits punctuation, so ?! isn't valid
+    # might need to do some looping to smash adjacent punctuation together?
     tags_lst = np.concatenate((tags_lst, ['UHW', 'ABR']))
     num_tags = tags_lst.shape[0]
 
@@ -115,10 +117,10 @@ def init_prior_pos_proba(
         tag_idx = get_loc_in_array(tag, tags_lst)
         tag_counts[word][tag_idx] += 1
 
-    cPickle.dump(tag_counts,
-                 open('storage/tag_brown_distribution.pkl', 'wb'))
-    cPickle.dump(tags_lst,
-                 open('storage/tag_brown_order.pkl', 'wb'))
+    with open('storage/tag_brown_distribution.pkl', 'wb') as f:
+        cPickle.dump(tag_counts, f)
+    with open('storage/tag_brown_order.pkl', 'wb') as f:
+        cPickle.dump(tags_lst, f)
 
     return tag_counts
 
@@ -139,8 +141,9 @@ def lookup_prior_pos_proba(
         tokens : list
                  tokens abstracted from text
 
-        tag_counts : list of tuples
-                     counts of P-O-S for the brown corpus
+        tag_counts : dict of word-to-subdict mapping
+                     subdict is P-O-S to counts mapping
+                     for the brown corpus
 
         tag_order : list of strings
                     order of P-O-S in frequency array
@@ -148,16 +151,16 @@ def lookup_prior_pos_proba(
         Returns
         -------
         probas : 2D array
-                 probabilities per token per P`OS
+                 probabilities per token per P-O-S
     '''
 
     if tag_counts is None:
-        tag_counts = cPickle.load(
-            open('storage/tag_brown_distribution.pkl', 'rb'))
+        with open('storage/tag_brown_distribution.pkl', 'rb') as f:
+            tag_counts = cPickle.load(f)
 
     if tag_order is None:
-        tag_order = cPickle.load(
-            open('storage/tag_brown_order.pkl', 'rb'))
+        with open('storage/tag_brown_order.pkl', 'rb') as f:
+            tag_order = cPickle.load(f)
 
     num_tags = tag_order.shape[0]
 
@@ -172,14 +175,15 @@ def lookup_prior_pos_proba(
 
     def is_plural(x):
         lemma = lemmatizer.lemmatize(x, 'n')
-        plural = True if word is not lemma else False
+        plural = True if word is not lemma else False # aka plural != lemma
         return plural
 
     def is_upper(x):
-        if len(x) > 0:
+        if len(x) >= 0:
             return x[0].isupper()
         return False
 
+    result = []
     for token in tokens:
         token_in_lexicon = False
         if token in tag_counts:
@@ -224,9 +228,14 @@ def lookup_prior_pos_proba(
         '''
         if is_upper(token):
             proper_pr = 0.5 if token_in_lexicon else 0.9
+            cur_tag_distrib *= (1 - proper_pr)
             code = 'NNPS' if is_plural(token) else 'NNP'
             cur_tag_distrib[get_loc_in_array(
                 code, tag_order)] = proper_pr
+        
+        result.append(cur_tag_distrib)
+
+    return np.array(result)
 
 
 def group_categories():
@@ -241,54 +250,160 @@ def group_categories():
     colon or dash, abbreviation,
     sentence-ending punctuation, others
     '''
+    noun = 'noun'
+    verb = 'verb'
+    article = 'article'
+    modifier = 'modifier'
+    conjunction = 'conjunction'
+    pronoun = 'pronoun'
+    preposition = 'preposition'
+    proper_noun = 'proper noun'
+    number = 'number'
+    comma_semicolon = 'comma or semicolon'
+    left_paren = 'left parentheses'
+    right_paren = 'right parentheses'
+    non_punctuation_char = 'non punctuation character'
+    possessive = 'possessive'
+    colon_dash = 'color or dash'
+    abbrev = 'abbreviation'
+    ending_punc = 'sentence ending punctuation'
+    others = 'others'
+
     mapper = dict()
-    mapper['CC'] = ''
-    mapper['PRP$'] = ''
-    mapper['VBG'] = ''
-    mapper['VBD'] = ''
-    mapper['``'] = ''
-    mapper[','] = ''
-    mapper["''"] = ''
-    mapper['VBP'] = ''
-    mapper['WDT'] = ''
-    mapper['JJ'] = ''
-    mapper['WP'] = ''
-    mapper['VBZ'] = ''
-    mapper['DT'] = ''
-    mapper['RP'] = ''
-    mapper['$'] = ''
-    mapper['NN'] = ''
-    mapper[')'] = ''
-    mapper['('] = ''
-    mapper['FW'] = ''
-    mapper['POS'] = ''
-    mapper['.'] = ''
-    mapper['TO'] = ''
-    mapper['PRP'] = ''
-    mapper['RB'] = ''
-    mapper[':'] = ''
-    mapper['NNS'] = ''
-    mapper['NNP'] = ''
-    mapper['VB'] = ''
-    mapper['WRB'] = ''
-    mapper['CC'] = ''
-    mapper['LS'] = ''
-    mapper['PDT'] = ''
-    mapper['RBS'] = ''
-    mapper['RBR'] = ''
-    mapper['VBN'] = ''
-    mapper['EX'] = ''
-    mapper['IN'] = ''
-    mapper['WP$'] = ''
-    mapper['CD'] = ''
-    mapper['MD'] = ''
-    mapper['NNPS'] = ''
-    mapper['JJS'] = ''
-    mapper['JJR'] = ''
-    mapper['SYM'] = ''
-    mapper['UH'] = ''
-    mapper['ABR'] = ''
-    mapper['UHW'] = ''
+    # mapper["$"] = ''
+    # mapper["''"] = ''
+    # mapper["("] = ''
+    # mapper[")"] = ''
+    # mapper[","] = ''
+    # mapper["."] = ''
+    # mapper[":"] = ''
+    # mapper["ABR"] = ''
+    # mapper["CC"] = ''
+    # mapper["CD"] = ''
+    # mapper["DT"] = ''
+    # mapper["EX"] = ''
+    # mapper["FW"] = ''
+    # mapper["IN"] = ''
+    # mapper["JJ"] = ''
+    # mapper["JJR"] = ''
+    # mapper["JJS"] = ''
+    # mapper["LS"] = ''
+    # mapper["MD"] = ''
+    # mapper["NN"] = ''
+    # mapper["NNP"] = ''
+    # mapper["NNPS"] = ''
+    # mapper["NNS"] = ''
+    # mapper["PDT"] = ''
+    # mapper["POS"] = ''
+    # mapper["PRP"] = ''
+    # mapper["PRP$"] = ''
+    # mapper["RB"] = ''
+    # mapper["RBR"] = ''
+    # mapper["RBS"] = ''
+    # mapper["RP"] = ''
+    # mapper["SYM"] = ''
+    # mapper["TO"] = ''
+    # mapper["UH"] = ''
+    # mapper["UHW"] = ''
+    # mapper["VB"] = ''
+    # mapper["VBD"] = ''
+    # mapper["VBG"] = ''
+    # mapper["VBN"] = ''
+    # mapper["VBP"] = ''
+    # mapper["VBZ"] = ''
+    # mapper["WDT"] = ''
+    # mapper["WP"] = ''
+    # mapper["WP$"] = ''
+    # mapper["WRB"] = ''
+    # mapper["``"] = ''
+
+    mapper["."] = ending_punc
+    mapper["("] = left_paren
+    mapper[")"] = right_paren
+    mapper["*"] = conjunction
+    mapper["--"] = colon_dash       # dash
+    mapper[","] = comma_semicolon   # comma
+    mapper[":"] = colon_dash        # colon
+    mapper["ABL"] = modifier        # pre-qualifier 
+    mapper["ABN"] = modifier        # pre-quantifier
+    mapper["ABX"] = modifier        # pre-quantifier
+    mapper["AP"] = modifier         # post-determiner ?? i guess
+    mapper["AT"] = article
+    mapper["BE"] = ''
+    mapper["BED"] = ''
+    mapper["BEDZ"] = ''
+    mapper["BEG"] = ''
+    mapper["BEM"] = ''
+    mapper["BEN"] = ''
+    mapper["BER"] = ''
+    mapper["BEZ"] = ''
+    mapper["CC"] = ''
+    mapper["CD"] = ''
+    mapper["CS"] = ''
+    mapper["DO"] = ''
+    mapper["DOD"] = ''
+    mapper["DOZ"] = ''
+    mapper["DT"] = ''
+    mapper["DTI"] = ''
+    mapper["DTS"] = ''
+    mapper["DTX"] = ''
+    mapper["EX"] = ''
+    mapper["FW"] = ''
+    mapper["HL"] = ''
+    mapper["HV"] = ''
+    mapper["HVD"] = ''
+    mapper["HVG"] = ''
+    mapper["HVN"] = ''
+    mapper["HVZ"] = ''
+    mapper["IN"] = ''
+    mapper["JJ"] = ''
+    mapper["JJR"] = ''
+    mapper["JJS"] = ''
+    mapper["JJT"] = ''
+    mapper["MD"] = ''
+    mapper["NC"] = ''
+    mapper["NN"] = ''
+    mapper["NN$"] = ''
+    mapper["NNS"] = ''
+    mapper["NNS$"] = ''
+    mapper["NP"] = ''
+    mapper["NP$"] = ''
+    mapper["NPS"] = ''
+    mapper["NPS$"] = ''
+    mapper["NR"] = ''
+    mapper["NRS"] = ''
+    mapper["OD"] = ''
+    mapper["PN"] = ''
+    mapper["PN$"] = ''
+    mapper["PP$"] = ''
+    mapper["PP$$"] = ''
+    mapper["PPL"] = ''
+    mapper["PPLS"] = ''
+    mapper["PPO"] = ''
+    mapper["PPS"] = ''
+    mapper["PPSS"] = ''
+    mapper["QL"] = ''
+    mapper["QLP"] = ''
+    mapper["RB"] = ''
+    mapper["RBR"] = ''
+    mapper["RBT"] = ''
+    mapper["RN"] = ''
+    mapper["RP"] = ''
+    mapper["TL"] = ''
+    mapper["regular"] = ''
+    mapper["TO"] = ''
+    mapper["UH"] = ''
+    mapper["VB"] = ''
+    mapper["VBD"] = ''
+    mapper["VBG"] = ''
+    mapper["VBN"] = ''
+    mapper["VBZ"] = ''
+    mapper["WDT"] = ''
+    mapper["WP$"] = ''
+    mapper["WPO"] = ''
+    mapper["WPS"] = ''
+    mapper["WQL"] = ''
+    mapper["WRB"] = ''
 
     f = lambda x: mapper[x] if x in mapper else None
     return f
