@@ -21,9 +21,10 @@ from __future__ import print_function
 
 import numpy as np
 import nltk
-import io
-import tokenize
 import cPickle
+
+import create_toy_data as ctd
+from collections import defaultdict
 
 # load in libraries for NN
 import autograd.numpy as np
@@ -32,32 +33,6 @@ from autograd.scipy.misc import logsumexp
 from autograd import grad
 from autograd.util import flatten
 from optimizers import adam
-
-
-def generate_tokens_from_string(text):
-    ''' wrapper for nltk.word_tokenize
-        returns a list of strings
-
-        Args
-        ----
-        text : string
-               the text to be tokenized
-
-        Returns
-        -------
-        tokens : list
-                 list of separated tokens
-
-    '''
-    
-    '''
-    # manually do it
-    string_io = io.StringIO(text)
-    tokens = tokenize.generate_tokens(
-        string_io.readline)
-    '''
-    tokens = nltk.tokenize.word_tokenize(text)
-    return tokens
 
 
 def get_loc_in_array(value, array):
@@ -90,37 +65,32 @@ def init_prior_pos_proba(
                 dictionary of word mapping to
                 its frequency
     '''
-    tag_counts = dict()
+
     if lexicon is None:
-        with open('storage/tagged_brown_corpus.pkl', 'rb') as f:
-            lexicon = cPickle.load(f)
+        lexicon = ctd.load_data(
+            ctd.brown_generator(), return_tags=True)
 
     # get all tags (take only first part: 70 tags)
     tags_fd = nltk.FreqDist(
         tag for (word, tag) in lexicon)
     tags_lst = np.array(dict(tags_fd).keys())
-    ''' three tags are added:
-        - PEP : possible end-of-sentence punctuation
-        - UHW : unknown hyphenated word
+
+    ''' tags are added:
         - ABR : abbreviation
     '''
-    # word_tokenize splits punctuation, so ?! isn't valid
-    # might need to do some looping to smash adjacent punctuation together?
-    tags_lst = np.concatenate((tags_lst, ['UHW', 'ABR']))
+    tags_lst = np.concatenate((tags_lst, ['ABR']))
     num_tags = tags_lst.shape[0]
+    tag_counts = defaultdict(lambda: np.zeros(num_tags))
 
     # loop through words and fill out freq
     for word, tag in lexicon:
-        if not word in tag_counts:
-            tag_counts[word] = np.zeros(num_tags)
-
         tag_idx = get_loc_in_array(tag, tags_lst)
         tag_counts[word][tag_idx] += 1
 
-    with open('storage/tag_brown_distribution.pkl', 'wb') as f:
-        cPickle.dump(tag_counts, f)
-    with open('storage/tag_brown_order.pkl', 'wb') as f:
-        cPickle.dump(tags_lst, f)
+    cPickle.dump(tag_counts,
+                 open('storage/brown_tag_distribution.pkl', 'wb'))
+    cPickle.dump(tags_lst,
+                 open('storage/brown_tag_order.pkl', 'wb'))
 
     return tag_counts
 
@@ -155,12 +125,12 @@ def lookup_prior_pos_proba(
     '''
 
     if tag_counts is None:
-        with open('storage/tag_brown_distribution.pkl', 'rb') as f:
-            tag_counts = cPickle.load(f)
+        tag_counts = cPickle.load(
+            open('storage/brown_tag_distribution.pkl', 'rb'))
 
     if tag_order is None:
-        with open('storage/tag_brown_order.pkl', 'rb') as f:
-            tag_order = cPickle.load(f)
+        tag_order = cPickle.load(
+            open('storage/brown_tag_order.pkl', 'rb'))
 
     num_tags = tag_order.shape[0]
 
