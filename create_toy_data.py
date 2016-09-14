@@ -6,6 +6,7 @@ as a platform for loading them all.
 
 import os
 import nltk
+import util
 
 IGNORE_FILES = [
     '.DS_Store',
@@ -13,6 +14,17 @@ IGNORE_FILES = [
     'README',
     'categories.pickle'
 ]
+
+DEFAULT_TAG = 'unk'
+
+
+def safe_split(s, char='/'):
+    if char in s:
+        arr = s.split(char)
+        if util.is_int(arr[-1]) or arr[-1].strip() == '':
+            return (s, DEFAULT_TAG)
+        return (arr[:-1], arr[-1])
+    return (s, DEFAULT_TAG)
 
 
 def brown_generator(loc='datasets/brown/raw'):
@@ -77,9 +89,12 @@ def load_data(
 
         doc_tokens = tokens = nltk.tokenize.word_tokenize(doc_con)
         for cur_doc_tokens in doc_tokens:
-            cur_doc_word, cur_doc_pos = cur_doc_tokens.split('/')
+            cur_doc_word, cur_doc_pos = \
+                safe_split(cur_doc_tokens, char='/')
 
             if return_tags:
                 yield((cur_doc_word, cur_doc_pos))
             else:
                 yield cur_doc_word
+
+

@@ -19,6 +19,8 @@ from __future__ import print_function
 
 import numpy as np
 import nltk
+import create_toy_data as ctd
+from collections import defaultdict
 
 # load in libraries for NN
 import autograd.numpy as np
@@ -59,34 +61,31 @@ def init_prior_pos_proba(
                 dictionary of word mapping to
                 its frequency
     '''
-    tag_counts = dict()
+
     if lexicon is None:
-        lexicon = cPickle.load(
-            open('storage/tagged_brown_corpus.pkl', 'rb'))
+        lexicon = ctd.load_data(
+            ctd.brown_generator(), return_tags=True)
 
     # get all tags (take only first part: 70 tags)
     tags_fd = nltk.FreqDist(
         tag for (word, tag) in lexicon)
     tags_lst = np.array(dict(tags_fd).keys())
-    ''' three tags are added:
-        - UHW : unknown hyphenated word
+    ''' tags are added:
         - ABR : abbreviation
     '''
-    tags_lst = np.concatenate((tags_lst, ['UHW', 'ABR']))
+    tags_lst = np.concatenate((tags_lst, ['ABR']))
     num_tags = tags_lst.shape[0]
+    tag_counts = defaultdict(lambda: np.zeros(num_tags))
 
     # loop through words and fill out freq
     for word, tag in lexicon:
-        if not word in tag_counts:
-            tag_counts[word] = np.zeros(num_tags)
-
         tag_idx = get_loc_in_array(tag, tags_lst)
         tag_counts[word][tag_idx] += 1
 
     cPickle.dump(tag_counts,
-                 open('storage/tag_brown_distribution.pkl', 'wb'))
+                 open('storage/brown_tag_distribution.pkl', 'wb'))
     cPickle.dump(tags_lst,
-                 open('storage/tag_brown_order.pkl', 'wb'))
+                 open('storage/brown_tag_order.pkl', 'wb'))
 
     return tag_counts
 
@@ -121,11 +120,11 @@ def lookup_prior_pos_proba(
 
     if tag_counts is None:
         tag_counts = cPickle.load(
-            open('storage/tag_brown_distribution.pkl', 'rb'))
+            open('storage/brown_tag_distribution.pkl', 'rb'))
 
     if tag_order is None:
         tag_order = cPickle.load(
-            open('storage/tag_brown_order.pkl', 'rb'))
+            open('storage/brown_tag_order.pkl', 'rb'))
 
     num_tags = tag_order.shape[0]
 
