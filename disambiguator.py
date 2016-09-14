@@ -215,7 +215,7 @@ def get_descriptor_arrays(
         cur_tag_count[get_loc_in_array(FOLLOWS_EOS_PUNC, tag_order)] = 0
 
         # divide counts to get probabilities
-        cur_tag_distrib = cur_tag_count / np.sum(counts)
+        cur_tag_distrib = cur_tag_count / np.sum(cur_tag_count)
 
         ''' capitalized words in lexicon but not
             registered as proper nouns can still be
