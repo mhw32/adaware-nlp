@@ -40,8 +40,10 @@ from optimizers import adam
 
 def get_loc_in_array(value, array):
     find = np.where(array == value)
+    # print("value: {}, array: {}, find: {}".format(value, array, find))
+    find = find[0]
     if find.shape[0] > 0:
-        return find[0][0]
+        return find[0]
     raise RuntimeError("Couldn't find value: {} in array".format(value))
 
 def init_prior_pos_proba(
@@ -88,7 +90,7 @@ def init_prior_pos_proba(
         POSSESSIVE,
         COLON_DASH,
         ABBREV,
-        ENDING_PUNC,
+        EOS_PUNC,
         OTHERS,
         IS_UPPER,
         FOLLOWS_EOS_PUNC
@@ -100,12 +102,15 @@ def init_prior_pos_proba(
 
     # loop through words and fill out freq
     for word, tag in lexicon:
-        reduced_tag = cat_lookup(tag)
-        tag_idx = get_loc_in_array(reduced_tag, descriptor_array)
-        tag_counts[word][tag_idx] += 1
+        reduced_tags = cat_lookup(tag)
+        if reduced_tags is None:
+            continue
+        for reduced_tag in reduced_tags:
+            tag_idx = get_loc_in_array(reduced_tag, descriptor_array)
+            tag_counts[word][tag_idx] += 1
 
     with open('storage/brown_tag_distribution.pkl', 'wb') as f:
-        cPickle.dump(tag_counts, f)
+        cPickle.dump(dict(tag_counts), f)
     with open('storage/brown_tag_order.pkl', 'wb') as f:
         cPickle.dump(descriptor_array, f)
 
@@ -198,7 +203,7 @@ def get_descriptor_arrays(
             if has_number(token):
                 cur_tag_count[get_loc_in_array(NUMBER, tag_order)] += 1
             elif has_eos_punc(token):
-                cur_tag_count[get_loc_in_array(ENDING_PUNC, tag_order)] += 1
+                cur_tag_count[get_loc_in_array(EOS_PUNC, tag_order)] += 1
             elif is_abbrev(token):
                 cur_tag_count[get_loc_in_array(ABBREV, tag_order)] += 1
             elif has_hyphen(token):
@@ -250,7 +255,7 @@ def group_categories():
     sentence-ending punctuation, others
     '''
     mapper = dict()
-    mapper["."] = [ENDING_PUNC]                   # ending punctuation
+    mapper["."] = [EOS_PUNC]                   # ending punctuation
     mapper["("] = [LEFT_PAREN]                    # left parentheses
     mapper[")"] = [RIGHT_PAREN]                   # right parentheses
     mapper["*"] = [CONJUNCTION]                   # conjunction

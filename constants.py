@@ -16,7 +16,7 @@ NON_PUNC_CHAR       = 'tag-non punctuation character'
 POSSESSIVE          = 'tag-possessive'
 COLON_DASH          = 'tag-color or dash'
 ABBREV              = 'tag-abbreviation'
-ENDING_PUNC         = 'tag-sentence ending punctuation'
+EOS_PUNC            = 'tag-sentence ending punctuation'
 OTHERS              = 'tag-others'
 
 IS_UPPER            = 'is upper'

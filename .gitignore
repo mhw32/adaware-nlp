@@ -89,4 +89,5 @@ ENV/
 .ropeproject
 
 # Project specific 
-storage/
+storage/*
+!storage/.gitkeep
