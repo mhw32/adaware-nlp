@@ -91,7 +91,7 @@ def init_prior_pos_proba(
         ENDING_PUNC,
         OTHERS,
         IS_UPPER,
-        FOLLOWS_PUNC
+        FOLLOWS_EOS_PUNC
     ])
 
     cat_lookup = group_categories()
@@ -112,7 +112,7 @@ def init_prior_pos_proba(
     return tag_counts
 
 
-def lookup_prior_pos_proba(
+def get_descriptor_arrays(
         tokens, tag_counts=None, tag_order=None):
     ''' The context around a word can be approximated
         by a single part-of-speech (POS) per word. We
@@ -170,7 +170,7 @@ def lookup_prior_pos_proba(
             return x[0].isupper()
         return False
 
-    result = []
+    desc_arrays = []
     prev_token = None
     for token in tokens:
         token_in_lexicon = False
@@ -207,6 +207,11 @@ def lookup_prior_pos_proba(
             else:
                 cur_tag_count = np.ones(num_tags)
 
+
+        # zero out IS_UPPER and FOLLOWS_EOS_PUNC before normalize
+        cur_tag_count[get_loc_in_array(IS_UPPER, tag_order)] = 0
+        cur_tag_count[get_loc_in_array(FOLLOWS_EOS_PUNC, tag_order)] = 0
+
         # divide counts to get probabilities
         cur_tag_distrib = cur_tag_count / np.sum(counts)
 
@@ -218,14 +223,18 @@ def lookup_prior_pos_proba(
         if is_upper(token):
             proper_pr = 0.5 if token_in_lexicon else 0.9
             cur_tag_distrib *= (1 - proper_pr)
-            code = 'NNPS' if is_plural(token) else 'NNP'
             cur_tag_distrib[get_loc_in_array(
-                code, tag_order)] = proper_pr
+                PROPER_NOUN, tag_order)] = proper_pr
+
+            cur_tag_distrib[get_loc_in_array(IS_UPPER, tag_order)] = 1
+
+        if prev_token and has_eos_punc(prev_token):
+            cur_tag_distrib[get_loc_in_array(FOLLOWS_EOS_PUNC, tag_order)] = 1
         
         prev_token = token
-        result.append(cur_tag_distrib)
+        desc_arrays.append(cur_tag_distrib)
 
-    return np.array(result)
+    return np.array(desc_arrays)
 
 
 def group_categories():
