@@ -23,6 +23,7 @@ import numpy as np
 import nltk
 import cPickle
 
+from constants import *
 import create_toy_data as ctd
 from collections import defaultdict
 
@@ -87,10 +88,10 @@ def init_prior_pos_proba(
         tag_idx = get_loc_in_array(tag, tags_lst)
         tag_counts[word][tag_idx] += 1
 
-    cPickle.dump(tag_counts,
-                 open('storage/brown_tag_distribution.pkl', 'wb'))
-    cPickle.dump(tags_lst,
-                 open('storage/brown_tag_order.pkl', 'wb'))
+    with open('storage/brown_tag_distribution.pkl', 'wb') as f:
+        cPickle.dump(tag_counts, f)
+    with open('storage/brown_tag_order.pkl', 'wb') as f:
+        cPickle.dump(tags_lst, f)
 
     return tag_counts
 
@@ -220,112 +221,93 @@ def group_categories():
     colon or dash, abbreviation,
     sentence-ending punctuation, others
     '''
-    noun = 'noun'
-    verb = 'verb'
-    article = 'article'
-    modifier = 'modifier'
-    conjunction = 'conjunction'
-    pronoun = 'pronoun'
-    preposition = 'preposition'
-    proper_noun = 'proper noun'
-    number = 'number'
-    comma_semicolon = 'comma or semicolon'
-    left_paren = 'left parentheses'
-    right_paren = 'right parentheses'
-    non_punctuation_char = 'non punctuation character'
-    possessive = 'possessive'
-    colon_dash = 'color or dash'
-    abbrev = 'abbreviation'
-    ending_punc = 'sentence ending punctuation'
-    others = 'others'
-
     mapper = dict()
-    mapper["."] = ending_punc
-    mapper["("] = left_paren
-    mapper[")"] = right_paren
-    mapper["*"] = conjunction
-    mapper["--"] = colon_dash       # dash
-    mapper[","] = comma_semicolon   # comma
-    mapper[":"] = colon_dash        # colon
-    mapper["ABL"] = modifier        # pre-qualifier 
-    mapper["ABN"] = modifier        # pre-quantifier
-    mapper["ABX"] = modifier        # pre-quantifier
-    mapper["AP"] = modifier         # post-determiner ?? i guess
-    mapper["AT"] = article          # article
-    mapper["BE"] = ''               # ? be
-    mapper["BED"] = ''              # ? were
-    mapper["BEDZ"] = ''             # ? was
-    mapper["BEG"] = ''              # ? being
-    mapper["BEM"] = ''              # ? am
-    mapper["BEN"] = ''              # ? been
-    mapper["BER"] = ''              # ? are, art
-    mapper["BEZ"] = ''              # ? is
-    mapper["CC"] = conjunction      # coordinating conjunction
-    mapper["CD"] = number           # cardinal numeral
-    mapper["CS"] = conjunction      # subordinating conjunction
-    mapper["DO"] = ''               # ? do
-    mapper["DOD"] = ''              # ? did
-    mapper["DOZ"] = ''              # ? does
-    mapper["DT"] = ''               # ? plural determiner [these, those]
-    mapper["DTI"] = ''              # ? singular/plural determiner/quantifier [some, any]
-    mapper["DTS"] = ''              # ? plural determiner
-    mapper["DTX"] = ''              # ? determiner/double conjunction
-    mapper["EX"] = ''               # ? existentil there
-    mapper["FW"] = ''               # ? foreign word (hyphenated before regular tag)
-    mapper["HL"] = ''               # ? word occurring in headline (hyphenated after regular tag)
-    mapper["HV"] = ''               # ? have
-    mapper["HVD"] = ''              # ? had (past tense)
-    mapper["HVG"] = ''              # ? having
-    mapper["HVN"] = ''              # ? had (pase participle)
-    mapper["HVZ"] = ''              # ? has
-    mapper["IN"] = ''               # ? preposition
-    mapper["JJ"] = ''               # ? adjective
-    mapper["JJR"] = ''              # ? comparative adjective 
-    mapper["JJS"] = ''              # ? semantically superlative adjective [chief, top]
-    mapper["JJT"] = ''              # ? morphologically superlative adjective [ biggest ]
-    mapper["MD"] = ''               # ? modal auxiliary [ can, should will]
-    mapper["NC"] = ''               # ? cited word (hypenated after regular tag)
-    mapper["NN"] = ''               # singular or mass noun
-    mapper["NN$"] = ''              # possessive singular noun
-    mapper["NNS"] = ''              # plural noun
-    mapper["NNS$"] = ''             # possessive plural noun
-    mapper["NP"] = ''               # proper noun or part of name phrase
-    mapper["NP$"] = ''              # possessive proper noun
-    mapper["NPS"] = ''              # proper plural noun
-    mapper["NPS$"] = ''             # possessive plural proper noun
-    mapper["NR"] = ''               # advertbial noun [home, today, west]
-    mapper["NRS"] = ''              # plural adverbial noun
-    mapper["OD"] = ''               # ordinal numeral [first, 2nd]
-    mapper["PN"] = ''               # nominal pronoun [everybody, nothing]
-    mapper["PN$"] = ''              # possessive nominal pronoun    
-    mapper["PP$"] = ''              # possessive personal pronoun [my, our]
-    mapper["PP$$"] = ''             # second (nominal) possessive pronoun [mine, ours]
-    mapper["PPL"] = ''              # singular reflexive/intensive personal pronoun [myself]
-    mapper["PPLS"] = ''             # plural reflexive/intensive personal pronoun [ourselves]
-    mapper["PPO"] = ''              # objective personal pronoun [me, him, it, them]
-    mapper["PPS"] = ''              # 3rd. singular nominative pronoun  [he, she, it, one]
-    mapper["PPSS"] = ''             # other nominative personal pronoun [I, we, they, you]
-    mapper["QL"] = ''               # qualifier [very, fairly]
-    mapper["QLP"] = ''              # post-qualifier [enough, indeed]
-    mapper["RB"] = ''               # adverb
-    mapper["RBR"] = ''              # comparative adverb
-    mapper["RBT"] = ''              # superlative adverb
-    mapper["RN"] = ''               # nominal adverb [here then, inddors]
-    mapper["RP"] = ''               # adverb/participle [about, off, up]
-    mapper["TL"] = ''               # word occuring in title (hyphenated after regular tag)
-    mapper["TO"] = ''               # infinitive marker to
-    mapper["UH"] = ''               # interjection, exclamation
-    mapper["VB"] = ''               # verb, base form
-    mapper["VBD"] = ''              # verb, past tense
-    mapper["VBG"] = ''              # verb, present participle/gerund
-    mapper["VBN"] = ''              # verb, past participle
-    mapper["VBZ"] = ''              # verb, 3rd. singular present
-    mapper["WDT"] = ''              # wh- determiner [what, which]
-    mapper["WP$"] = ''              # possessive wh- pronoun [whose]
-    mapper["WPO"] = ''              # objective wh- pronoun [whom, which, that]
-    mapper["WPS"] = ''              # nominative wh- pronoun [who, which, that]
-    mapper["WQL"] = ''              # wh- qualifier [how]
-    mapper["WRB"] = ''              # wh- adverb [how, where, when]
+    mapper["."] = [ENDING_PUNC]                   # ending punctuation
+    mapper["("] = [LEFT_PAREN]                    # left parentheses
+    mapper[")"] = [RIGHT_PAREN]                   # right parentheses
+    mapper["*"] = [CONJUNCTION]                   # conjunction
+    mapper["--"] = [COLON_DASH]                   # dash
+    mapper[","] = [COMMA_SEMICOLON]               # comma
+    mapper[":"] = [COLON_DASH]                    # colon
+    mapper["ABL"] = [MODIFIER]                    # pre-qualifier [quite, rather]
+    mapper["ABN"] = [MODIFIER]                    # pre-quantifier [half, all]
+    mapper["ABX"] = [MODIFIER]                    # pre-quantifier [both]
+    mapper["AP"] = [OTHERS]                       # post-determiner [many, several, next]
+    mapper["AT"] = [ARTICLE]                      # article
+    mapper["BE"] = [VERB]                         # be
+    mapper["BED"] = [VERB]                        # were
+    mapper["BEDZ"] = [VERB]                       # was
+    mapper["BEG"] = [VERB]                        # being
+    mapper["BEM"] = [VERB]                        # am
+    mapper["BEN"] = [VERB]                        # been
+    mapper["BER"] = [VERB]                        # are, art
+    mapper["BEZ"] = [VERB]                        # is
+    mapper["CC"] = [CONJUNCTION]                  # coordinating conjunction
+    mapper["CD"] = [NUMBER]                       # cardinal numeral
+    mapper["CS"] = [CONJUNCTION]                  # subordinating conjunction
+    mapper["DO"] = [VERB]                         # do
+    mapper["DOD"] = [VERB]                        # did
+    mapper["DOZ"] = [VERB]                        # does
+    mapper["DT"] = [OTHERS]                       # plural determiner [these, those]
+    mapper["DTI"] = [OTHERS]                      # singular/plural determiner/quantifier [some, any]
+    mapper["DTS"] = [OTHERS]                      # plural determiner
+    mapper["DTX"] = [CONJUNCTION]                 # determiner/double conjunction [either]
+    mapper["EX"] = [OTHERS]                       # existentil there
+    mapper["FW"] = None                           # foreign word (hyphenated before regular tag)
+    mapper["HL"] = None                           # word occurring in headline (hyphenated after regular tag)
+    mapper["HV"] = [VERB]                         # have
+    mapper["HVD"] = [VERB]                        # had (past tense)
+    mapper["HVG"] = [VERB]                        # having
+    mapper["HVN"] = [VERB]                        # had (past participle)
+    mapper["HVZ"] = [VERB]                        # has
+    mapper["IN"] = [PREPOSITION]                  # preposition
+    mapper["JJ"] = [MODIFIER]                     # adjective
+    mapper["JJR"] = [MODIFIER]                    # comparative adjective 
+    mapper["JJS"] = [MODIFIER]                    # semantically superlative adjective [chief, top]
+    mapper["JJT"] = [MODIFIER]                    # morphologically superlative adjective [ biggest ]
+    mapper["MD"] = [OTHERS]                       # modal auxiliary [can, should, will]
+    mapper["NC"] = None                           # cited word (hypenated after regular tag)
+    mapper["NN"] = [NOUN]                         # singular or mass noun
+    mapper["NN$"] = [NOUN, POSSESSIVE]            # possessive singular noun
+    mapper["NNS"] = [NOUN]                        # plural noun
+    mapper["NNS$"] = [NOUN, POSSESSIVE]           # possessive plural noun
+    mapper["NP"] = [PROPER_NOUN]                  # proper noun or part of name phrase
+    mapper["NP$"] = [PROPER_NOUN, POSSESSIVE]     # possessive proper noun
+    mapper["NPS"] = [PROPER_NOUN]                 # proper plural noun
+    mapper["NPS$"] = [PROPER_NOUN, POSSESSIVE]    # possessive plural proper noun
+    mapper["NR"] = [NOUN, MODIFIER]               # adverbial noun [home, today, west]
+    mapper["NRS"] = [NOUN, MODIFIER]              # plural adverbial noun
+    mapper["OD"] = [NUMBER]                       # ordinal numeral [first, 2nd]
+    mapper["PN"] = [PRONOUN]                      # nominal pronoun [everybody, nothing]
+    mapper["PN$"] = [PRONOUN, POSSESSIVE]         # possessive nominal pronoun    
+    mapper["PP$"] = [PRONOUN, POSSESSIVE]         # possessive personal pronoun [my, our]
+    mapper["PP$$"] = [PRONOUN, POSSESSIVE]        # second (nominal) possessive pronoun [mine, ours]
+    mapper["PPL"] = [PRONOUN]                     # singular reflexive/intensive personal pronoun [myself]
+    mapper["PPLS"] = [PRONOUN]                    # plural reflexive/intensive personal pronoun [ourselves]
+    mapper["PPO"] = [PRONOUN]                     # objective personal pronoun [me, him, it, them]
+    mapper["PPS"] = [PRONOUN]                     # 3rd. singular nominative pronoun  [he, she, it, one]
+    mapper["PPSS"] = [PRONOUN]                    # other nominative personal pronoun [I, we, they, you]
+    mapper["QL"] = [MODIFIER]                     # qualifier [very, fairly]
+    mapper["QLP"] = [MODIFIER]                    # post-qualifier [enough, indeed]
+    mapper["RB"] = [MODIFIER]                     # adverb
+    mapper["RBR"] = [MODIFIER]                    # comparative adverb
+    mapper["RBT"] = [MODIFIER]                    # superlative adverb
+    mapper["RN"] = [MODIFIER]                     # nominal adverb [here then, inddors]
+    mapper["RP"] = [MODIFIER]                     # adverb/participle [about, off, up]
+    mapper["TL"] = None                           # word occuring in title (hyphenated after regular tag)
+    mapper["TO"] = [OTHERS]                       # infinitive marker to
+    mapper["UH"] = [OTHERS]                       # interjection, exclamation
+    mapper["VB"] = [VERB]                         # verb, base form
+    mapper["VBD"] = [VERB]                        # verb, past tense
+    mapper["VBG"] = [VERB]                        # verb, present participle/gerund
+    mapper["VBN"] = [VERB]                        # verb, past participle
+    mapper["VBZ"] = [VERB]                        # verb, 3rd. singular present
+    mapper["WDT"] = [OTHERS]                      # wh- determiner [what, which]
+    mapper["WP$"] = [PRONOUN, POSSESSIVE]         # possessive wh- pronoun [whose]
+    mapper["WPO"] = [PRONOUN]                     # objective wh- pronoun [whom, which, that]
+    mapper["WPS"] = [PRONOUN]                     # nominative wh- pronoun [who, which, that]
+    mapper["WQL"] = [MODIFIER]                    # wh- qualifier [how]
+    mapper["WRB"] = [MODIFIER]                    # wh- adverb [how, where, when]
 
     f = lambda x: mapper[x] if x in mapper else None
     return f

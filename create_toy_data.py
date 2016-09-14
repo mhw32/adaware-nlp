@@ -15,16 +15,7 @@ IGNORE_FILES = [
     'categories.pickle'
 ]
 
-DEFAULT_TAG = 'unk'
-
-
-def safe_split(s, char='/'):
-    if char in s:
-        arr = s.split(char)
-        if util.is_int(arr[-1]) or arr[-1].strip() == '':
-            return (s, DEFAULT_TAG)
-        return (arr[:-1], arr[-1])
-    return (s, DEFAULT_TAG)
+DEFAULT_TAG = 'UNK'
 
 
 def brown_generator(loc='datasets/brown/raw'):
@@ -88,9 +79,12 @@ def load_data(
                 break
 
         doc_tokens = tokens = nltk.tokenize.word_tokenize(doc_con)
-        for cur_doc_tokens in doc_tokens:
+        for cur_doc_token in doc_tokens:
             cur_doc_word, cur_doc_pos = \
-                safe_split(cur_doc_tokens, char='/')
+                nltk.tag.str2tuple(cur_doc_token, sep='/')
+
+            if util.is_int(cur_doc_pos) or cur_doc_pos == '':
+                cur_doc_post = DEFAULT_TAG
 
             if return_tags:
                 yield((cur_doc_word, cur_doc_pos))
