@@ -22,12 +22,10 @@ from __future__ import print_function
 import numpy as np
 import nltk
 import cPickle
-import itertools
 
 from constants import *
 import create_toy_data as ctd
 from collections import defaultdict
-import sys
 
 # load in libraries for NN
 import autograd.numpy as np
@@ -135,7 +133,6 @@ def get_descriptor_arrays(
 
         tag_counts : dict of word-to-subdict mapping
                      subdict is P-O-S to counts mapping
-                     for the brown corpus
 
         tag_order : list of strings
                     order of P-O-S in frequency array
