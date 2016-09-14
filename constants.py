@@ -18,3 +18,6 @@ COLON_DASH          = 'tag-color or dash'
 ABBREV              = 'tag-abbreviation'
 ENDING_PUNC         = 'tag-sentence ending punctuation'
 OTHERS              = 'tag-others'
+
+IS_UPPER            = 'is_upper'
+FOLLOWS_PUNC        = 'follows_punc'

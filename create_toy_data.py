@@ -12,7 +12,8 @@ IGNORE_FILES = [
     '.DS_Store',
     'CONTENTS',
     'README',
-    'categories.pickle'
+    'categories.pickle',
+    'cats.txt'
 ]
 
 DEFAULT_TAG = 'UNK'
@@ -42,6 +43,8 @@ def brown_generator(loc='datasets/brown/raw'):
             fpath = os.path.join(root, fname)
             with open(fpath, 'rb') as fp:
                 fcontent = fp.read()
+                print "-"*30
+                print "reading: {}".format(fpath)
                 yield (findex, fcontent)
 
             findex += 1
@@ -78,13 +81,19 @@ def load_data(
             if doc_id > num_docs:
                 break
 
-        doc_tokens = tokens = nltk.tokenize.word_tokenize(doc_con)
-        for cur_doc_token in doc_tokens:
+        # fuck nltk. they word_tokenize off punctuation as well
+        # doc_tokens = tokens = nltk.tokenize.word_tokenize(doc_con)
+
+        for cur_doc_token in doc_con.split():
             cur_doc_word, cur_doc_pos = \
                 nltk.tag.str2tuple(cur_doc_token, sep='/')
 
+            if cur_doc_pos is None:
+                print "found an item with no tag: {}".format(cur_doc_token)
+                cur_doc_pos = DEFAULT_TAG
+
             if util.is_int(cur_doc_pos) or cur_doc_pos == '':
-                cur_doc_post = DEFAULT_TAG
+                cur_doc_pos = DEFAULT_TAG
 
             if return_tags:
                 yield((cur_doc_word, cur_doc_pos))

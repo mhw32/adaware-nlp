@@ -22,10 +22,12 @@ from __future__ import print_function
 import numpy as np
 import nltk
 import cPickle
+import itertools
 
 from constants import *
 import create_toy_data as ctd
 from collections import defaultdict
+import sys
 
 # load in libraries for NN
 import autograd.numpy as np
@@ -41,7 +43,6 @@ def get_loc_in_array(value, array):
     if find.shape[0] > 0:
         return find[0][0]
     raise RuntimeError("Couldn't find value: {} in array".format(value))
-
 
 def init_prior_pos_proba(
         lexicon=None, simplify_tags=True):
@@ -66,32 +67,47 @@ def init_prior_pos_proba(
                 dictionary of word mapping to
                 its frequency
     '''
-
     if lexicon is None:
-        lexicon = list(ctd.load_data(
-            ctd.brown_generator(), return_tags=True))
+        lexicon = ctd.load_data(
+            ctd.brown_generator(), return_tags=True)
+    
+    descriptor_array = np.array([
+        NOUN,
+        VERB,
+        ARTICLE,
+        MODIFIER,
+        CONJUNCTION,
+        PRONOUN,
+        PREPOSITION,
+        PROPER_NOUN,
+        NUMBER,
+        COMMA_SEMICOLON,
+        LEFT_PAREN,
+        RIGHT_PAREN,
+        NON_PUNC_CHAR,
+        POSSESSIVE,
+        COLON_DASH,
+        ABBREV,
+        ENDING_PUNC,
+        OTHERS,
+        IS_UPPER,
+        FOLLOWS_PUNC
+    ])
 
-    # get all tags (take only first part: 70 tags)
-    tags_fd = nltk.FreqDist(
-        tag for (word, tag) in lexicon)
-    tags_lst = np.array(dict(tags_fd).keys())
-
-    ''' tags are added:
-        - ABR : abbreviation
-    '''
-    tags_lst = np.concatenate((tags_lst, ['ABR']))
-    num_tags = tags_lst.shape[0]
+    cat_lookup = group_categories()
+    num_tags = descriptor_array.shape[0]
     tag_counts = defaultdict(lambda: np.zeros(num_tags))
 
     # loop through words and fill out freq
     for word, tag in lexicon:
-        tag_idx = get_loc_in_array(tag, tags_lst)
+        reduced_tag = cat_lookup(tag)
+        tag_idx = get_loc_in_array(reduced_tag, descriptor_array)
         tag_counts[word][tag_idx] += 1
 
     with open('storage/brown_tag_distribution.pkl', 'wb') as f:
         cPickle.dump(tag_counts, f)
     with open('storage/brown_tag_order.pkl', 'wb') as f:
-        cPickle.dump(tags_lst, f)
+        cPickle.dump(descriptor_array, f)
 
     return tag_counts
 
@@ -155,6 +171,7 @@ def lookup_prior_pos_proba(
         return False
 
     result = []
+    prev_token = None
     for token in tokens:
         token_in_lexicon = False
         if token in tag_counts:
@@ -179,13 +196,14 @@ def lookup_prior_pos_proba(
             '''
             cur_tag_count = np.zeros(num_tags)
             if has_number(token):
-                cur_tag_count[get_loc_in_array('CD', tag_order)] += 1
+                cur_tag_count[get_loc_in_array(NUMBER, tag_order)] += 1
             elif has_eos_punc(token):
-                cur_tag_count[get_loc_in_array('.', tag_order)] += 1
+                cur_tag_count[get_loc_in_array(ENDING_PUNC, tag_order)] += 1
             elif is_abbrev(token):
-                cur_tag_count[get_loc_in_array('ABR', tag_order)] += 1
+                cur_tag_count[get_loc_in_array(ABBREV, tag_order)] += 1
             elif has_hyphen(token):
                 cur_tag_count[get_loc_in_array('UHW', tag_order)] += 1
+                # TODO: don't know how to lookup this...
             else:
                 cur_tag_count = np.ones(num_tags)
 
@@ -204,6 +222,7 @@ def lookup_prior_pos_proba(
             cur_tag_distrib[get_loc_in_array(
                 code, tag_order)] = proper_pr
         
+        prev_token = token
         result.append(cur_tag_distrib)
 
     return np.array(result)
@@ -231,6 +250,7 @@ def group_categories():
     mapper[":"] = [COLON_DASH]                    # colon
     mapper["ABL"] = [MODIFIER]                    # pre-qualifier [quite, rather]
     mapper["ABN"] = [MODIFIER]                    # pre-quantifier [half, all]
+    mapper["ABR"] = [ABBREV]                      # abbreviation CUSTOM TAG
     mapper["ABX"] = [MODIFIER]                    # pre-quantifier [both]
     mapper["AP"] = [OTHERS]                       # post-determiner [many, several, next]
     mapper["AT"] = [ARTICLE]                      # article
@@ -297,6 +317,7 @@ def group_categories():
     mapper["TL"] = None                           # word occuring in title (hyphenated after regular tag)
     mapper["TO"] = [OTHERS]                       # infinitive marker to
     mapper["UH"] = [OTHERS]                       # interjection, exclamation
+    mapper["UNK"] =  None                         # unknown CUSTOM TAG
     mapper["VB"] = [VERB]                         # verb, base form
     mapper["VBD"] = [VERB]                        # verb, past tense
     mapper["VBG"] = [VERB]                        # verb, present participle/gerund
