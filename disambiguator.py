@@ -19,8 +19,6 @@ from __future__ import print_function
 
 import numpy as np
 import nltk
-import io
-import tokenize
 
 # load in libraries for NN
 import autograd.numpy as np
@@ -29,36 +27,6 @@ from autograd.scipy.misc import logsumexp
 from autograd import grad
 from autograd.util import flatten
 from optimizers import adam
-
-
-def generate_tokens_from_string(text):
-    ''' wrapper for tokenizer.generate_tokens
-        returns a generator of 5 tuples
-        1. token type
-        2. token string
-        3. (srow, scol)
-        4. (erow, ecol)
-        5. line number
-
-        Args
-        ----
-        text : string
-               the text to be tokenized
-
-        Returns
-        -------
-        tokens : list
-                 list of separated tokens
-
-    '''
-    '''
-    # manually do it
-    string_io = io.StringIO(text)
-    tokens = tokenize.generate_tokens(
-        string_io.readline)
-    '''
-    tokens = nltk.tokenize.word_tokenize(text)
-    return tokens
 
 
 def get_loc_in_array(value, array):
