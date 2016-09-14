@@ -37,9 +37,8 @@ from optimizers import adam
 
 
 def get_loc_in_array(value, array):
-    find = np.where(array == value)
+    find = np.where(array == value)[0]
     # print("value: {}, array: {}, find: {}".format(value, array, find))
-    find = find[0]
     if find.shape[0] > 0:
         return find[0]
     raise RuntimeError("Couldn't find value: {} in array".format(value))
@@ -252,7 +251,7 @@ def group_categories():
     sentence-ending punctuation, others
     '''
     mapper = dict()
-    mapper["."] = [EOS_PUNC]                   # ending punctuation
+    mapper["."] = [EOS_PUNC]                      # ending punctuation
     mapper["("] = [LEFT_PAREN]                    # left parentheses
     mapper[")"] = [RIGHT_PAREN]                   # right parentheses
     mapper["*"] = [CONJUNCTION]                   # conjunction

@@ -20,4 +20,4 @@ EOS_PUNC            = 'tag-sentence ending punctuation'
 OTHERS              = 'tag-others'
 
 IS_UPPER            = 'is upper'
-FOLLOWS_EOS_PUNC        = 'follows eos punc'
+FOLLOWS_EOS_PUNC    = 'follows eos punc'
