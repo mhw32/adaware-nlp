@@ -98,14 +98,42 @@ def init_prior_pos_proba(
     tag_counts = defaultdict(lambda: np.zeros(num_tags))
 
     # loop through words and fill out freq
-    for word, tag in lexicon:
-        reduced_tags = cat_lookup(tag)
-        if reduced_tags is None:
-            continue
-        for reduced_tag in reduced_tags:
-            tag_idx = get_loc_in_array(reduced_tag, descriptor_array)
+    for word, tag_bunch in lexicon:
+        if tag_bunch == '--':
+            tag_idx = get_loc_in_array(COLON_DASH, descriptor_array)
             tag_counts[word][tag_idx] += 1
+            continue
 
+        if '*' in tag_bunch:
+            tag_idx = get_loc_in_array(CONJUNCTION, descriptor_array)
+            tag_counts[word][tag_idx] += 1
+            tag_bunch = tag_bunch.replace('*', '')
+
+        for tt in tag_bunch.split('-'):
+            for single_tag in tt.split('+'):
+                # print("tag_bunch: {} || single_tag: {}".format(tag_bunch, single_tag))
+                    
+                reduced_tags = cat_lookup(single_tag)
+
+                if reduced_tags is None and single_tag in ['``', "''", '', "'", 'HL', 'FW', 'NC', 'TL']:
+                    # tags known to be weird, but also okay
+                    continue
+                elif reduced_tags is None and \
+                    single_tag in ['RB$', 'DT$', 'NR$', 'AP$', 'JJ$', 'CD$', 'N', 'T', 'PP', 'NIL']:
+                    # odd tags, probably should really figure them out
+                    # datasets/brown/raw/cj31 -> PPSS+BER-N
+                    # datasets/brown/raw/cj37 -> FW-IN+AT-T
+                    # datasets/brown/raw/ce01 -> WDT+BER+PP, PP is probably personal pronoun
+                    continue
+                elif reduced_tags is None:
+                    # not a "known exception", print
+                    print("word: {}, tag_bunch not found: {}".format(word, tag_bunch))
+                    continue
+
+                for reduced_tag in reduced_tags:
+                    tag_idx = get_loc_in_array(reduced_tag, descriptor_array)
+                    tag_counts[word][tag_idx] += 1
+                
     with open('storage/brown_tag_distribution.pkl', 'wb') as f:
         cPickle.dump(dict(tag_counts), f)
     with open('storage/brown_tag_order.pkl', 'wb') as f:

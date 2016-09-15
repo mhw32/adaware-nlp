@@ -81,7 +81,7 @@ def load_data(
             if doc_id > num_docs:
                 break
 
-        # fuck nltk. they word_tokenize off punctuation as well
+        # nltk word_tokenizes off punctuation as well
         # doc_tokens = tokens = nltk.tokenize.word_tokenize(doc_con)
 
         for cur_doc_token in doc_con.split():
