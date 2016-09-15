@@ -1,0 +1,50 @@
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>Smart Summary</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="The love child of Kenny Lam and Mike Wu">
+    <style type="text/css">
+    body {
+        text-align: center;
+    }
+    #queryform_url {
+        margin-top:2em;
+    }
+    #queryform_url input {
+        padding-top:.25em;
+        padding-bottom:.25em;
+        padding-left: .5em;
+    }
+    #queryform_text {
+        margin-top: 1em;
+    }
+    textarea {
+        text-align: left;
+    }
+    </style>
+
+</head>
+<body>
+    <header>
+    header stuff
+    </header>
+
+    <form action="/query_url" method="post" id="queryform_url">
+        <input type="text" name="URL" placeholder="URL of article to summarize" autofocus size=100>
+        <button type="submit">Submit</button>
+    </form>
+
+    <div>OR</div>
+
+    <form action="/query_raw" method="post" id="queryform_text">
+        <textarea name="raw_text" form="queryform_text" cols=100 placeholder="Enter raw text to summarize"></textarea>
+        <button type="submit">Submit</button>
+    </form>
+
+    <footer>
+    &copy; 2016 Smart Summary
+    </footer>
+</body>
+</html>
