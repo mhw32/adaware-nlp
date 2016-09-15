@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 '''
 Python implementation of SATZ, a sentence
 boundary disambiguator using a feed
@@ -19,6 +21,9 @@ from __future__ import print_function
 
 import numpy as np
 import nltk
+import cPickle
+
+from constants import *
 import create_toy_data as ctd
 from collections import defaultdict
 
@@ -32,11 +37,11 @@ from optimizers import adam
 
 
 def get_loc_in_array(value, array):
-    find = np.where(array == value)
+    find = np.where(array == value)[0]
+    # print("value: {}, array: {}, find: {}".format(value, array, find))
     if find.shape[0] > 0:
-        return find[0][0]
-    return -1
-
+        return find[0]
+    raise RuntimeError("Couldn't find value: {} in array".format(value))
 
 def init_prior_pos_proba(
         lexicon=None, simplify_tags=True):
@@ -61,36 +66,55 @@ def init_prior_pos_proba(
                 dictionary of word mapping to
                 its frequency
     '''
-
     if lexicon is None:
         lexicon = ctd.load_data(
             ctd.brown_generator(), return_tags=True)
+    
+    descriptor_array = np.array([
+        NOUN,
+        VERB,
+        ARTICLE,
+        MODIFIER,
+        CONJUNCTION,
+        PRONOUN,
+        PREPOSITION,
+        PROPER_NOUN,
+        NUMBER,
+        COMMA_SEMICOLON,
+        LEFT_PAREN,
+        RIGHT_PAREN,
+        NON_PUNC_CHAR,
+        POSSESSIVE,
+        COLON_DASH,
+        ABBREV,
+        EOS_PUNC,
+        OTHERS,
+        IS_UPPER,
+        FOLLOWS_EOS_PUNC
+    ])
 
-    # get all tags (take only first part: 70 tags)
-    tags_fd = nltk.FreqDist(
-        tag for (word, tag) in lexicon)
-    tags_lst = np.array(dict(tags_fd).keys())
-    ''' tags are added:
-        - ABR : abbreviation
-    '''
-    tags_lst = np.concatenate((tags_lst, ['ABR']))
-    num_tags = tags_lst.shape[0]
+    cat_lookup = group_categories()
+    num_tags = descriptor_array.shape[0]
     tag_counts = defaultdict(lambda: np.zeros(num_tags))
 
     # loop through words and fill out freq
     for word, tag in lexicon:
-        tag_idx = get_loc_in_array(tag, tags_lst)
-        tag_counts[word][tag_idx] += 1
+        reduced_tags = cat_lookup(tag)
+        if reduced_tags is None:
+            continue
+        for reduced_tag in reduced_tags:
+            tag_idx = get_loc_in_array(reduced_tag, descriptor_array)
+            tag_counts[word][tag_idx] += 1
 
-    cPickle.dump(tag_counts,
-                 open('storage/brown_tag_distribution.pkl', 'wb'))
-    cPickle.dump(tags_lst,
-                 open('storage/brown_tag_order.pkl', 'wb'))
+    with open('storage/brown_tag_distribution.pkl', 'wb') as f:
+        cPickle.dump(dict(tag_counts), f)
+    with open('storage/brown_tag_order.pkl', 'wb') as f:
+        cPickle.dump(descriptor_array, f)
 
     return tag_counts
 
 
-def lookup_prior_pos_proba(
+def get_descriptor_arrays(
         tokens, tag_counts=None, tag_order=None):
     ''' The context around a word can be approximated
         by a single part-of-speech (POS) per word. We
@@ -106,8 +130,8 @@ def lookup_prior_pos_proba(
         tokens : list
                  tokens abstracted from text
 
-        tag_counts : list of tuples
-                     counts of P-O-S for the brown corpus
+        tag_counts : dict of word-to-subdict mapping
+                     subdict is P-O-S to counts mapping
 
         tag_order : list of strings
                     order of P-O-S in frequency array
@@ -115,7 +139,7 @@ def lookup_prior_pos_proba(
         Returns
         -------
         probas : 2D array
-                 probabilities per token per P`OS
+                 probabilities per token per P-O-S
     '''
 
     if tag_counts is None:
@@ -139,14 +163,16 @@ def lookup_prior_pos_proba(
 
     def is_plural(x):
         lemma = lemmatizer.lemmatize(x, 'n')
-        plural = True if word is not lemma else False
+        plural = True if word is not lemma else False # aka plural != lemma
         return plural
 
     def is_upper(x):
-        if len(x) > 0:
+        if len(x) >= 0:
             return x[0].isupper()
         return False
 
+    desc_arrays = []
+    prev_token = None
     for token in tokens:
         token_in_lexicon = False
         if token in tag_counts:
@@ -171,18 +197,24 @@ def lookup_prior_pos_proba(
             '''
             cur_tag_count = np.zeros(num_tags)
             if has_number(token):
-                cur_tag_count[get_loc_in_array('CD', tag_order)] += 1
+                cur_tag_count[get_loc_in_array(NUMBER, tag_order)] += 1
             elif has_eos_punc(token):
-                cur_tag_count[get_loc_in_array('.', tag_order)] += 1
+                cur_tag_count[get_loc_in_array(EOS_PUNC, tag_order)] += 1
             elif is_abbrev(token):
-                cur_tag_count[get_loc_in_array('ABR', tag_order)] += 1
+                cur_tag_count[get_loc_in_array(ABBREV, tag_order)] += 1
             elif has_hyphen(token):
                 cur_tag_count[get_loc_in_array('UHW', tag_order)] += 1
+                # TODO: don't know how to lookup this...
             else:
                 cur_tag_count = np.ones(num_tags)
 
+
+        # zero out IS_UPPER and FOLLOWS_EOS_PUNC before normalize
+        cur_tag_count[get_loc_in_array(IS_UPPER, tag_order)] = 0
+        cur_tag_count[get_loc_in_array(FOLLOWS_EOS_PUNC, tag_order)] = 0
+
         # divide counts to get probabilities
-        cur_tag_distrib = cur_tag_count / np.sum(counts)
+        cur_tag_distrib = cur_tag_count / np.sum(cur_tag_count)
 
         ''' capitalized words in lexicon but not
             registered as proper nouns can still be
@@ -191,9 +223,19 @@ def lookup_prior_pos_proba(
         '''
         if is_upper(token):
             proper_pr = 0.5 if token_in_lexicon else 0.9
-            code = 'NNPS' if is_plural(token) else 'NNP'
+            cur_tag_distrib *= (1 - proper_pr)
             cur_tag_distrib[get_loc_in_array(
-                code, tag_order)] = proper_pr
+                PROPER_NOUN, tag_order)] = proper_pr
+
+            cur_tag_distrib[get_loc_in_array(IS_UPPER, tag_order)] = 1
+
+        if prev_token and has_eos_punc(prev_token):
+            cur_tag_distrib[get_loc_in_array(FOLLOWS_EOS_PUNC, tag_order)] = 1
+        
+        prev_token = token
+        desc_arrays.append(cur_tag_distrib)
+
+    return np.array(desc_arrays)
 
 
 def group_categories():
@@ -209,53 +251,94 @@ def group_categories():
     sentence-ending punctuation, others
     '''
     mapper = dict()
-    mapper['CC'] = ''
-    mapper['PRP$'] = ''
-    mapper['VBG'] = ''
-    mapper['VBD'] = ''
-    mapper['``'] = ''
-    mapper[','] = ''
-    mapper["''"] = ''
-    mapper['VBP'] = ''
-    mapper['WDT'] = ''
-    mapper['JJ'] = ''
-    mapper['WP'] = ''
-    mapper['VBZ'] = ''
-    mapper['DT'] = ''
-    mapper['RP'] = ''
-    mapper['$'] = ''
-    mapper['NN'] = ''
-    mapper[')'] = ''
-    mapper['('] = ''
-    mapper['FW'] = ''
-    mapper['POS'] = ''
-    mapper['.'] = ''
-    mapper['TO'] = ''
-    mapper['PRP'] = ''
-    mapper['RB'] = ''
-    mapper[':'] = ''
-    mapper['NNS'] = ''
-    mapper['NNP'] = ''
-    mapper['VB'] = ''
-    mapper['WRB'] = ''
-    mapper['CC'] = ''
-    mapper['LS'] = ''
-    mapper['PDT'] = ''
-    mapper['RBS'] = ''
-    mapper['RBR'] = ''
-    mapper['VBN'] = ''
-    mapper['EX'] = ''
-    mapper['IN'] = ''
-    mapper['WP$'] = ''
-    mapper['CD'] = ''
-    mapper['MD'] = ''
-    mapper['NNPS'] = ''
-    mapper['JJS'] = ''
-    mapper['JJR'] = ''
-    mapper['SYM'] = ''
-    mapper['UH'] = ''
-    mapper['ABR'] = ''
-    mapper['UHW'] = ''
+    mapper["."] = [EOS_PUNC]                      # ending punctuation
+    mapper["("] = [LEFT_PAREN]                    # left parentheses
+    mapper[")"] = [RIGHT_PAREN]                   # right parentheses
+    mapper["*"] = [CONJUNCTION]                   # conjunction
+    mapper["--"] = [COLON_DASH]                   # dash
+    mapper[","] = [COMMA_SEMICOLON]               # comma
+    mapper[":"] = [COLON_DASH]                    # colon
+    mapper["ABL"] = [MODIFIER]                    # pre-qualifier [quite, rather]
+    mapper["ABN"] = [MODIFIER]                    # pre-quantifier [half, all]
+    mapper["ABR"] = [ABBREV]                      # abbreviation CUSTOM TAG
+    mapper["ABX"] = [MODIFIER]                    # pre-quantifier [both]
+    mapper["AP"] = [OTHERS]                       # post-determiner [many, several, next]
+    mapper["AT"] = [ARTICLE]                      # article
+    mapper["BE"] = [VERB]                         # be
+    mapper["BED"] = [VERB]                        # were
+    mapper["BEDZ"] = [VERB]                       # was
+    mapper["BEG"] = [VERB]                        # being
+    mapper["BEM"] = [VERB]                        # am
+    mapper["BEN"] = [VERB]                        # been
+    mapper["BER"] = [VERB]                        # are, art
+    mapper["BEZ"] = [VERB]                        # is
+    mapper["CC"] = [CONJUNCTION]                  # coordinating conjunction
+    mapper["CD"] = [NUMBER]                       # cardinal numeral
+    mapper["CS"] = [CONJUNCTION]                  # subordinating conjunction
+    mapper["DO"] = [VERB]                         # do
+    mapper["DOD"] = [VERB]                        # did
+    mapper["DOZ"] = [VERB]                        # does
+    mapper["DT"] = [OTHERS]                       # plural determiner [these, those]
+    mapper["DTI"] = [OTHERS]                      # singular/plural determiner/quantifier [some, any]
+    mapper["DTS"] = [OTHERS]                      # plural determiner
+    mapper["DTX"] = [CONJUNCTION]                 # determiner/double conjunction [either]
+    mapper["EX"] = [OTHERS]                       # existentil there
+    mapper["FW"] = None                           # foreign word (hyphenated before regular tag)
+    mapper["HL"] = None                           # word occurring in headline (hyphenated after regular tag)
+    mapper["HV"] = [VERB]                         # have
+    mapper["HVD"] = [VERB]                        # had (past tense)
+    mapper["HVG"] = [VERB]                        # having
+    mapper["HVN"] = [VERB]                        # had (past participle)
+    mapper["HVZ"] = [VERB]                        # has
+    mapper["IN"] = [PREPOSITION]                  # preposition
+    mapper["JJ"] = [MODIFIER]                     # adjective
+    mapper["JJR"] = [MODIFIER]                    # comparative adjective 
+    mapper["JJS"] = [MODIFIER]                    # semantically superlative adjective [chief, top]
+    mapper["JJT"] = [MODIFIER]                    # morphologically superlative adjective [ biggest ]
+    mapper["MD"] = [OTHERS]                       # modal auxiliary [can, should, will]
+    mapper["NC"] = None                           # cited word (hypenated after regular tag)
+    mapper["NN"] = [NOUN]                         # singular or mass noun
+    mapper["NN$"] = [NOUN, POSSESSIVE]            # possessive singular noun
+    mapper["NNS"] = [NOUN]                        # plural noun
+    mapper["NNS$"] = [NOUN, POSSESSIVE]           # possessive plural noun
+    mapper["NP"] = [PROPER_NOUN]                  # proper noun or part of name phrase
+    mapper["NP$"] = [PROPER_NOUN, POSSESSIVE]     # possessive proper noun
+    mapper["NPS"] = [PROPER_NOUN]                 # proper plural noun
+    mapper["NPS$"] = [PROPER_NOUN, POSSESSIVE]    # possessive plural proper noun
+    mapper["NR"] = [NOUN, MODIFIER]               # adverbial noun [home, today, west]
+    mapper["NRS"] = [NOUN, MODIFIER]              # plural adverbial noun
+    mapper["OD"] = [NUMBER]                       # ordinal numeral [first, 2nd]
+    mapper["PN"] = [PRONOUN]                      # nominal pronoun [everybody, nothing]
+    mapper["PN$"] = [PRONOUN, POSSESSIVE]         # possessive nominal pronoun    
+    mapper["PP$"] = [PRONOUN, POSSESSIVE]         # possessive personal pronoun [my, our]
+    mapper["PP$$"] = [PRONOUN, POSSESSIVE]        # second (nominal) possessive pronoun [mine, ours]
+    mapper["PPL"] = [PRONOUN]                     # singular reflexive/intensive personal pronoun [myself]
+    mapper["PPLS"] = [PRONOUN]                    # plural reflexive/intensive personal pronoun [ourselves]
+    mapper["PPO"] = [PRONOUN]                     # objective personal pronoun [me, him, it, them]
+    mapper["PPS"] = [PRONOUN]                     # 3rd. singular nominative pronoun  [he, she, it, one]
+    mapper["PPSS"] = [PRONOUN]                    # other nominative personal pronoun [I, we, they, you]
+    mapper["QL"] = [MODIFIER]                     # qualifier [very, fairly]
+    mapper["QLP"] = [MODIFIER]                    # post-qualifier [enough, indeed]
+    mapper["RB"] = [MODIFIER]                     # adverb
+    mapper["RBR"] = [MODIFIER]                    # comparative adverb
+    mapper["RBT"] = [MODIFIER]                    # superlative adverb
+    mapper["RN"] = [MODIFIER]                     # nominal adverb [here then, inddors]
+    mapper["RP"] = [MODIFIER]                     # adverb/participle [about, off, up]
+    mapper["TL"] = None                           # word occuring in title (hyphenated after regular tag)
+    mapper["TO"] = [OTHERS]                       # infinitive marker to
+    mapper["UH"] = [OTHERS]                       # interjection, exclamation
+    mapper["UNK"] =  None                         # unknown CUSTOM TAG
+    mapper["VB"] = [VERB]                         # verb, base form
+    mapper["VBD"] = [VERB]                        # verb, past tense
+    mapper["VBG"] = [VERB]                        # verb, present participle/gerund
+    mapper["VBN"] = [VERB]                        # verb, past participle
+    mapper["VBZ"] = [VERB]                        # verb, 3rd. singular present
+    mapper["WDT"] = [OTHERS]                      # wh- determiner [what, which]
+    mapper["WP$"] = [PRONOUN, POSSESSIVE]         # possessive wh- pronoun [whose]
+    mapper["WPO"] = [PRONOUN]                     # objective wh- pronoun [whom, which, that]
+    mapper["WPS"] = [PRONOUN]                     # nominative wh- pronoun [who, which, that]
+    mapper["WQL"] = [MODIFIER]                    # wh- qualifier [how]
+    mapper["WRB"] = [MODIFIER]                    # wh- adverb [how, where, when]
 
     f = lambda x: mapper[x] if x in mapper else None
     return f
