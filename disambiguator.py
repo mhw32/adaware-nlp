@@ -96,6 +96,7 @@ def init_prior_pos_proba(
     cat_lookup = group_categories()
     num_tags = descriptor_array.shape[0]
     tag_counts = defaultdict(lambda: np.zeros(num_tags))
+    tag_counts = defaultdict(lambda: np.zeros(num_tags))
 
     # loop through words and fill out freq
     for word, tag_bunch in lexicon:
@@ -371,12 +372,74 @@ def group_categories():
     f = lambda x: mapper[x] if x in mapper else None
     return f
 
+
+def safe_index(A, s, e):
+    # safe indexing
+    if s < 0: s = 0
+    if e > A.shape[0]: e = A.shape[0]
+    return A[s:e]
+
+
+def make_grams(darray, labels, num_grams, target_tag=EOS_PUNC, tag_order=None):
+    ''' Given darray, only take the ones that have a certain
+        label. Then take k/2 neighbors from either side.
+
+        Args
+        ----
+        darray : np array
+                 descriptor array
+
+        labels : np array
+                 output array
+
+        num_grams : integer
+                    num of surrounding grams
+                    if num_grams = 3, 3 on each side
+                    will be taken.
+
+        target_tag : string
+                     what tag to index to look for
+
+        tag_order : array
+                    list of tags
+
+        Returns
+        -------
+        new_darray : np array
+                     gram'd descriptor array
+
+        new_labels : np array
+                     gram'd labels
+    '''
+
+    if tag_order is None:
+        tag_order = cPickle.load(
+            open('storage/brown_tag_order.pkl', 'rb'))
+
+    if not target_tag in tag_order:
+        raise ValueError('Target tag not found in tag order.')
+
+    target_idx = np.where(tag_order == target_tag)[0][0]
+    eos_idx = np.where(labels[target_idx] > 0)[0]
+
+    for i, idx in enumerate(eos_idx):
+        sliced_darray = safe_index(darray, idx-num_grams, idx+num_grams).flatten()
+
+        if i == 0:
+            new_darray = sliced_darray
+            new_labels = labels[idx]
+        else:
+            new_darray = np.hstack((new_darray, sliced_darray))
+            new_labels = np.vstack((new_labels, labels[idx]))
+
+    return (new_darray, new_labels)
+
+
 '''
 Neural network setup to map tokens into sentence
 or non-sentence endings (binary classification)
 
 '''
-
 
 def init_random_params(scale, layer_sizes, rs=npr.RandomState(0)):
     """
@@ -463,3 +526,38 @@ def train_nn(
         num_iters=num_epochs * num_batches, callback=print_perf)
 
     return optimized_params
+
+
+def main():
+    ''' Paper found parameters to be efficient:
+        6 word contexts --> 3 num_grams
+        2 hidden_units
+    '''
+    lexicon = ctd.load_data(
+        ctd.brown_generator(), return_sent_labels=True)
+
+    # not efficient --> change me
+    data = np.array([[t, l] for t, l in lexicon])
+    tokens = data[:, 0]
+    labels = data[:, 1]
+
+    # get features
+    darrays = get_descriptor_arrays(tokens)
+
+    # put into grams (give context)
+    darrays, labels = make_grams(
+        darrays, labels, 3, target_tag=EOS_PUNC)
+
+    (tr_inputs, te_inputs), (tr_outputs, te_outputs) = ctd.split_data(
+        darrays, out_data=labels, frac=0.80)
+
+    trained_weights = train_nn(
+        tr_inputs, tr_outputs, 2,
+        batch_size=256, param_scale=0.1,
+        num_epochs=5, step_size=0.001, L2_reg=1.0)
+
+    # save the weights
+    np.save('storage/trained_weights.np', trained_weights)
+
+    te_preds = neural_net_predict(trained_weights, te_inputs)
+    print("auc: {}".format(ctd.get_auc(te_outputs, te_preds))
