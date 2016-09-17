@@ -69,7 +69,7 @@ def init_prior_pos_proba(
     if lexicon is None:
         lexicon = ctd.load_data(
             ctd.brown_generator(), return_tags=True)
-    
+
     descriptor_array = np.array([
         NOUN,
         VERB,
@@ -112,7 +112,7 @@ def init_prior_pos_proba(
         for tt in tag_bunch.split('-'):
             for single_tag in tt.split('+'):
                 # print("tag_bunch: {} || single_tag: {}".format(tag_bunch, single_tag))
-                    
+
                 reduced_tags = cat_lookup(single_tag)
 
                 if reduced_tags is None and single_tag in ['``', "''", '', "'", 'HL', 'FW', 'NC', 'TL']:
@@ -133,7 +133,7 @@ def init_prior_pos_proba(
                 for reduced_tag in reduced_tags:
                     tag_idx = get_loc_in_array(reduced_tag, descriptor_array)
                     tag_counts[word][tag_idx] += 1
-                
+
     with open('storage/brown_tag_distribution.pkl', 'wb') as f:
         cPickle.dump(dict(tag_counts), f)
     with open('storage/brown_tag_order.pkl', 'wb') as f:
@@ -231,7 +231,7 @@ def get_descriptor_arrays(
             elif is_abbrev(token):
                 cur_tag_count[get_loc_in_array(ABBREV, tag_order)] += 1
             elif has_hyphen(token):
-                cur_tag_count[get_loc_in_array('UHW', tag_order)] += 1
+                cur_tag_count[get_loc_in_array(OTHERS, tag_order)] += 1
                 # TODO: don't know how to lookup this...
             else:
                 cur_tag_count = np.ones(num_tags)
@@ -259,7 +259,7 @@ def get_descriptor_arrays(
 
         if prev_token and has_eos_punc(prev_token):
             cur_tag_distrib[get_loc_in_array(FOLLOWS_EOS_PUNC, tag_order)] = 1
-        
+
         prev_token = token
         desc_arrays.append(cur_tag_distrib)
 
@@ -311,8 +311,8 @@ def group_categories():
     mapper["DTS"] = [OTHERS]                      # plural determiner
     mapper["DTX"] = [CONJUNCTION]                 # determiner/double conjunction [either]
     mapper["EX"] = [OTHERS]                       # existentil there
-    mapper["FW"] = None                           # foreign word (hyphenated before regular tag)
-    mapper["HL"] = None                           # word occurring in headline (hyphenated after regular tag)
+    mapper["FW"] = [OTHERS]                       # foreign word (hyphenated before regular tag)
+    mapper["HL"] = [OTHERS]                       # word occurring in headline (hyphenated after regular tag)
     mapper["HV"] = [VERB]                         # have
     mapper["HVD"] = [VERB]                        # had (past tense)
     mapper["HVG"] = [VERB]                        # having
@@ -320,11 +320,11 @@ def group_categories():
     mapper["HVZ"] = [VERB]                        # has
     mapper["IN"] = [PREPOSITION]                  # preposition
     mapper["JJ"] = [MODIFIER]                     # adjective
-    mapper["JJR"] = [MODIFIER]                    # comparative adjective 
+    mapper["JJR"] = [MODIFIER]                    # comparative adjective
     mapper["JJS"] = [MODIFIER]                    # semantically superlative adjective [chief, top]
     mapper["JJT"] = [MODIFIER]                    # morphologically superlative adjective [ biggest ]
     mapper["MD"] = [OTHERS]                       # modal auxiliary [can, should, will]
-    mapper["NC"] = None                           # cited word (hypenated after regular tag)
+    mapper["NC"] = [ARTICLE]                      # cited word (hypenated after regular tag)
     mapper["NN"] = [NOUN]                         # singular or mass noun
     mapper["NN$"] = [NOUN, POSSESSIVE]            # possessive singular noun
     mapper["NNS"] = [NOUN]                        # plural noun
@@ -337,7 +337,7 @@ def group_categories():
     mapper["NRS"] = [NOUN, MODIFIER]              # plural adverbial noun
     mapper["OD"] = [NUMBER]                       # ordinal numeral [first, 2nd]
     mapper["PN"] = [PRONOUN]                      # nominal pronoun [everybody, nothing]
-    mapper["PN$"] = [PRONOUN, POSSESSIVE]         # possessive nominal pronoun    
+    mapper["PN$"] = [PRONOUN, POSSESSIVE]         # possessive nominal pronoun
     mapper["PP$"] = [PRONOUN, POSSESSIVE]         # possessive personal pronoun [my, our]
     mapper["PP$$"] = [PRONOUN, POSSESSIVE]        # second (nominal) possessive pronoun [mine, ours]
     mapper["PPL"] = [PRONOUN]                     # singular reflexive/intensive personal pronoun [myself]
@@ -352,10 +352,10 @@ def group_categories():
     mapper["RBT"] = [MODIFIER]                    # superlative adverb
     mapper["RN"] = [MODIFIER]                     # nominal adverb [here then, inddors]
     mapper["RP"] = [MODIFIER]                     # adverb/participle [about, off, up]
-    mapper["TL"] = None                           # word occuring in title (hyphenated after regular tag)
+    mapper["TL"] = [OTHERS]                       # word occuring in title (hyphenated after regular tag)
     mapper["TO"] = [OTHERS]                       # infinitive marker to
     mapper["UH"] = [OTHERS]                       # interjection, exclamation
-    mapper["UNK"] =  None                         # unknown CUSTOM TAG
+    mapper["UNK"] = [OTHERS]                      # unknown CUSTOM TAG
     mapper["VB"] = [VERB]                         # verb, base form
     mapper["VBD"] = [VERB]                        # verb, past tense
     mapper["VBG"] = [VERB]                        # verb, present participle/gerund
