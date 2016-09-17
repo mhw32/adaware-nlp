@@ -202,7 +202,10 @@ def get_descriptor_arrays(
 
     desc_arrays = []
     prev_token = None
-    for token in tokens:
+    for token_cnt, token in enumerate(tokens):
+        if token_cnt % 10000 == 0:
+            print('----------------------')
+            print('processing: token ({}/{})'.format(token_cnt, len(tokens)))
         token_in_lexicon = False
         if token in tag_counts:
             token_in_lexicon = True
@@ -373,20 +376,32 @@ def group_categories():
     return f
 
 
-def safe_index(A, s, e):
+def safe_index(A, s, e, pad=False):
     # safe indexing
-    if s < 0: s = 0
-    if e > A.shape[0]: e = A.shape[0]
+    num_col = A.shape[1]
+    pre = np.zeros((0, num_col))
+    post = np.zeros((0, num_col))
+
+    if s < 0:
+        pre = np.zeros((-s, num_col))
+        s = 0
+
+    if e > A.shape[0]:
+        post = np.zeros((e - A.shape[0], num_col))
+        e = A.shape[0]
+
+    if pad:
+        return np.concatenate((pre, A[s:e], post))
     return A[s:e]
 
 
-def make_grams(darray, labels, num_grams, target_tag=EOS_PUNC, tag_order=None):
-    ''' Given darray, only take the ones that have a certain
+def make_grams(darrays, labels, num_grams, target_tag=EOS_PUNC, tag_order=None):
+    ''' Given darrays, only take the ones that have a certain
         label. Then take k/2 neighbors from either side.
 
         Args
         ----
-        darray : np array
+        darrays : np array
                  descriptor array
 
         labels : np array
@@ -405,7 +420,7 @@ def make_grams(darray, labels, num_grams, target_tag=EOS_PUNC, tag_order=None):
 
         Returns
         -------
-        new_darray : np array
+        new_darrays : np array
                      gram'd descriptor array
 
         new_labels : np array
@@ -420,19 +435,22 @@ def make_grams(darray, labels, num_grams, target_tag=EOS_PUNC, tag_order=None):
         raise ValueError('Target tag not found in tag order.')
 
     target_idx = np.where(tag_order == target_tag)[0][0]
-    eos_idx = np.where(labels[target_idx] > 0)[0]
+    eos_idx = np.where(darrays[:,target_idx] > 0)[0]
+
+    new_darrays = np.zeros((eos_idx.shape[0],darrays.shape[1]*(2*num_grams + 1)))
+    new_labels = np.zeros(eos_idx.shape[0], 1)
 
     for i, idx in enumerate(eos_idx):
-        sliced_darray = safe_index(darray, idx-num_grams, idx+num_grams).flatten()
+        if i % 5000 == 0:
+            print('---------------------')
+            print('finding: end-of-sentence ({}/{})'.format(i, eos_idx.shape[0]))
 
-        if i == 0:
-            new_darray = sliced_darray
-            new_labels = labels[idx]
-        else:
-            new_darray = np.hstack((new_darray, sliced_darray))
-            new_labels = np.vstack((new_labels, labels[idx]))
+        sliced_darrays = safe_index(
+            darrays, idx-num_grams, idx+num_grams+1, pad=True).flatten()
+        new_darrays[i, :] = sliced_darrays
+        new_labels[i, 0] = labels[idx]
 
-    return (new_darray, new_labels)
+    return (new_darrays, new_labels)
 
 
 '''
@@ -539,7 +557,7 @@ def main():
     # not efficient --> change me
     data = np.array([[t, l] for t, l in lexicon])
     tokens = data[:, 0]
-    labels = data[:, 1]
+    labels = data[:, 1].astype(int)
 
     # get features
     darrays = get_descriptor_arrays(tokens)
@@ -560,4 +578,4 @@ def main():
     np.save('storage/trained_weights.np', trained_weights)
 
     te_preds = neural_net_predict(trained_weights, te_inputs)
-    print("auc: {}".format(ctd.get_auc(te_outputs, te_preds))
+    print("auc: {}".format(ctd.get_auc(te_outputs, te_preds)))

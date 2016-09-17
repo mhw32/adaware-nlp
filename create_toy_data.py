@@ -7,6 +7,8 @@ as a platform for loading them all.
 import os
 import nltk
 import util
+import numpy as np
+# from sklearn.metrics import roc_curve
 
 IGNORE_FILES = [
     '.DS_Store',
@@ -51,7 +53,7 @@ def brown_generator(loc='datasets/brown/raw'):
 
 
 def load_data(
-        generator, num_docs=None, return_tags=True,
+        generator, num_docs=None, return_tags=False,
         return_sent_labels=False):
     ''' For each document tokenize the words and
         separate the conglomerate into words and
