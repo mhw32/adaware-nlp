@@ -20,8 +20,9 @@ or non-sentence endings (binary classification)
 
 '''
 
+
 def sigmoid(x):
- 	return 1 / (1 + np.exp(-x))
+    return 1 / (1 + np.exp(-x))
 
 
 def init_random_params(scale, layer_sizes, rs=npr.RandomState(0)):
@@ -95,14 +96,15 @@ def train_nn(
     # Get gradient of objective using autograd.
     objective_grad = grad(objective)
 
-    print("     Epoch     |    Train accuracy  |    Train log-like  |  Holdout accuracy  |  Holdout log-like  ")
+    print(
+        "     Epoch     |    Train accuracy  |    Train log-like  |  Holdout accuracy  |  Holdout log-like  ")
 
     def print_perf(params, iter, gradient):
         if iter % num_batches == 0:
             train_acc = accuracy(params, tr_inputs, tr_outputs)
-            train_ll  = log_posterior(params, tr_inputs, tr_outputs, L2_reg)
+            train_ll = log_posterior(params, tr_inputs, tr_outputs, L2_reg)
             valid_acc = accuracy(params, va_inputs, va_outputs)
-            valid_ll  = log_posterior(params, va_inputs, va_outputs, L2_reg)
+            valid_ll = log_posterior(params, va_inputs, va_outputs, L2_reg)
             print("{:15}|{:20}|{:20}|{:20}|{:20}".format(
                 iter//num_batches, train_acc, train_ll, valid_acc, valid_ll))
 
