@@ -44,7 +44,7 @@ def get_loc_in_array(value, array):
     raise RuntimeError("Couldn't find value: {} in array".format(value))
 
 def init_prior_pos_proba(
-        lexicon=None, simplify_tags=True):
+        lexicon=None, simplify_tags=True, save_to_disk=False):
     ''' Set prior proba probabilities using
         the part-of-speech frequencies for
         every word in a given lexicon. Default
@@ -53,12 +53,15 @@ def init_prior_pos_proba(
         Args
         ----
         lexicon : list of tuples
-                each tuple is (word, part-of-speech)
+                  each tuple is (word, part-of-speech)
 
         simplify_tags : boolean
-                many of the tags have additional info
-                like IN-HL or HVZ*. Setting simplify_tags
-                to True, ignores these additional tags.
+                        many of the tags have additional info
+                        like IN-HL or HVZ*. Setting simplify_tags
+                        to True, ignores these additional tags.
+
+        save_to_disk : boolean
+                       write frequencies to a pickle file
 
         Returns
         -------
@@ -135,10 +138,11 @@ def init_prior_pos_proba(
                     tag_idx = get_loc_in_array(reduced_tag, descriptor_array)
                     tag_counts[word][tag_idx] += 1
 
-    with open('storage/brown_tag_distribution.pkl', 'wb') as f:
-        cPickle.dump(dict(tag_counts), f)
-    with open('storage/brown_tag_order.pkl', 'wb') as f:
-        cPickle.dump(descriptor_array, f)
+    if save_to_disk:
+        with open('storage/brown_tag_distribution.pkl', 'wb') as f:
+            cPickle.dump(dict(tag_counts), f)
+        with open('storage/brown_tag_order.pkl', 'wb') as f:
+            cPickle.dump(descriptor_array, f)
 
     return tag_counts
 
@@ -438,7 +442,7 @@ def make_grams(darrays, labels, num_grams, target_tag=EOS_PUNC, tag_order=None):
     eos_idx = np.where(darrays[:,target_idx] > 0)[0]
 
     new_darrays = np.zeros((eos_idx.shape[0],darrays.shape[1]*(2*num_grams + 1)))
-    new_labels = np.zeros(eos_idx.shape[0], 1)
+    new_labels = np.zeros((eos_idx.shape[0], 1))
 
     for i, idx in enumerate(eos_idx):
         if i % 5000 == 0:
@@ -506,14 +510,18 @@ def accuracy(params, inputs, targets):
 
 
 def train_nn(
-        tr_obs_set, tr_out_set, num_hiddens,
+        inputs, outputs, num_hiddens,
         batch_size=256, param_scale=0.1,
         num_epochs=5, step_size=0.001, L2_reg=1.0):
 
-    num_input_dims = tr_obs_set.shape[1]
+    # split data (again) into a training and a validation set
+    (tr_inputs, va_inputs), (tr_outputs, va_outputs) = ctd.split_data(
+        inputs, out_data=outputs, frac=0.80)
+
+    num_input_dims = tr_inputs.shape[1]
     layer_sizes = [num_input_dims, num_hiddens, 1]
     init_params = init_random_params(param_scale, layer_sizes)
-    num_batches = int(np.ceil(tr_obs_set.shape[0] / batch_size))
+    num_batches = int(np.ceil(tr_inputs.shape[0] / batch_size))
 
     def batch_indices(iter):
         idx = iter % num_batches
@@ -523,19 +531,19 @@ def train_nn(
     def objective(params, iter):
         idx = batch_indices(iter)
         return -log_posterior(
-            params, tr_obs_set[idx], tr_out_set[idx], L2_reg)
+            params, tr_inputs[idx], tr_outputs[idx], L2_reg)
 
     # Get gradient of objective using autograd.
     objective_grad = grad(objective)
 
-    print("     Epoch     |    Train accuracy  |       Test accuracy  ")
+    print("     Epoch     |    Train accuracy  |       Holdout accuracy  ")
 
     def print_perf(params, iter, gradient):
         if iter % num_batches == 0:
-            train_acc = accuracy(params, tr_obs_set, tr_out_set)
-            test_acc = accuracy(params, test_images, test_labels)
+            train_acc = accuracy(params, tr_inputs, tr_outputs)
+            valid_acc = accuracy(params, va_inputs, va_outputs)
             print("{:15}|{:20}|{:20}".format(
-                iter//num_batches, train_acc, test_acc))
+                iter//num_batches, train_acc, valid_acc))
 
     # The optimizers provided can optimize lists, tuples, or dicts of
     # parameters.
@@ -546,11 +554,17 @@ def train_nn(
     return optimized_params
 
 
-def main():
-    ''' Paper found parameters to be efficient:
-        6 word contexts --> 3 num_grams
-        2 hidden_units
+def create_features_labels(save_to_disk=False):
+    ''' Use pipeline to generate the (input, output)
+        pairs for machine learning
+
+        Args
+        ----
+        save_to_disk : boolean
+                       write frequencies to a pickle file
+
     '''
+
     lexicon = ctd.load_data(
         ctd.brown_generator(), return_sent_labels=True)
 
@@ -569,13 +583,33 @@ def main():
     (tr_inputs, te_inputs), (tr_outputs, te_outputs) = ctd.split_data(
         darrays, out_data=labels, frac=0.80)
 
+    if save_to_disk:
+        np.save('storage/data_nn_disambiguator/X_train.npy', tr_inputs)
+        np.save('storage/data_nn_disambiguator/X_test.npy', te_inputs)
+        np.save('storage/data_nn_disambiguator/y_train.npy', tr_outputs)
+        np.save('storage/data_nn_disambiguator/y_test.npy', te_outputs)
+
+    return (tr_inputs, te_inputs), (tr_outputs, te_outputs)
+
+
+def main():
+    ''' Paper found parameters to be efficient:
+        6 word contexts --> 3 num_grams
+        2 hidden_units
+    '''
+
+    X_train = np.load('storage/data_nn_disambiguator/X_train.npy')
+    X_test = np.load('storage/data_nn_disambiguator/X_test.npy')
+    y_train = np.load('storage/data_nn_disambiguator/y_train.npy')
+    y_test = np.load('storage/data_nn_disambiguator/y_test.npy')
+
     trained_weights = train_nn(
-        tr_inputs, tr_outputs, 2,
+        X_train, y_train, 2,
         batch_size=256, param_scale=0.1,
         num_epochs=5, step_size=0.001, L2_reg=1.0)
 
     # save the weights
     np.save('storage/trained_weights.np', trained_weights)
 
-    te_preds = neural_net_predict(trained_weights, te_inputs)
-    print("auc: {}".format(ctd.get_auc(te_outputs, te_preds)))
+    y_pred = neural_net_predict(trained_weights, X_test)
+    print("auc: {}".format(ctd.get_auc(y_test, y_pred)))

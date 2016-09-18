@@ -145,15 +145,15 @@ def split_data(in_data, out_data=None, frac=0.80):
         [(training_outputs, testing_outputs)]
     '''
 
-    num_data = in_data.shape[1]
+    num_data = in_data.shape[0]
     num_tr_data = int(np.floor(num_data * frac))
     indices = np.random.permutation(num_data)
 
     tr_idx, te_idx = indices[:num_tr_data], indices[num_tr_data:]
-    tr_in_data, te_in_data = in_data[:, tr_idx], in_data[:, te_idx]
+    tr_in_data, te_in_data = in_data[tr_idx, :], in_data[te_idx, :]
 
     if not out_data is None:
-        tr_out_data, te_out_data = out_data[:, tr_idx], out_data[:, te_idx]
+        tr_out_data, te_out_data = out_data[tr_idx, :], out_data[te_idx, :]
         return (tr_in_data, te_in_data), (tr_out_data, te_out_data)
 
     return (tr_in_data, te_in_data)
