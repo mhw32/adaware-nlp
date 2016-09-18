@@ -15,6 +15,7 @@ http://web.stanford.edu/class/cs276b/handouts/lecture14.pdf
 # Part of Speech Tagging
 
 - [Stanford tagging software](http://nlp.stanford.edu/software/tagger.shtml)  
+- *[HMM Models](http://cs.brown.edu/research/pubs/pdfs/1993/Charniak-1993-EPT.pdf)  
 - [Tutorial on HMM and POS Tagging](http://www.ece.ucsb.edu/Faculty/Rabiner/ece259/Reprints/tutorial%20on%20hmm%20and%20applications.pdf)  
 - [TnT - Statistical POS Tagger](http://dl.acm.org/citation.cfm?id=974178) (prereq 2 above)  
 - [Maximum Entropy POS Tagging](http://nlp.stanford.edu/~manning/papers/emnlp2000.pdf)  
