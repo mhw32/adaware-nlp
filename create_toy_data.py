@@ -8,7 +8,7 @@ import os
 import nltk
 import util
 import numpy as np
-# from sklearn.metrics import roc_curve
+from sklearn.metrics import roc_curve, auc
 
 IGNORE_FILES = [
     '.DS_Store',

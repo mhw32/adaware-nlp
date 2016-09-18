@@ -22,18 +22,11 @@ from __future__ import print_function
 import numpy as np
 import nltk
 import cPickle
+import nn
 
 from constants import *
 import create_toy_data as ctd
 from collections import defaultdict
-
-# load in libraries for NN
-import autograd.numpy as np
-import autograd.numpy.random as npr
-from autograd.scipy.misc import logsumexp
-from autograd import grad
-from autograd.util import flatten
-from optimizers import adam
 
 
 def get_loc_in_array(value, array):
@@ -42,6 +35,7 @@ def get_loc_in_array(value, array):
     if find.shape[0] > 0:
         return find[0]
     raise RuntimeError("Couldn't find value: {} in array".format(value))
+
 
 def init_prior_pos_proba(
         lexicon=None, simplify_tags=True, save_to_disk=False):
@@ -274,6 +268,18 @@ def get_descriptor_arrays(
     return np.array(desc_arrays)
 
 
+def get_dummies(outputs):
+    uniq_outputs = np.unique(outputs)
+    num_outputs = outputs.shape[0]
+
+    dummies = np.zeros((num_outputs, uniq_outputs.shape[0]))
+    for i, row in enumerate(outputs):
+        row_idx = np.where(uniq_outputs == row)[0][0]
+        dummies[i, row_idx] = 1
+
+    return dummies
+
+
 def group_categories():
     '''
     Mapping into these words:
@@ -442,7 +448,7 @@ def make_grams(darrays, labels, num_grams, target_tag=EOS_PUNC, tag_order=None):
     eos_idx = np.where(darrays[:,target_idx] > 0)[0]
 
     new_darrays = np.zeros((eos_idx.shape[0],darrays.shape[1]*(2*num_grams + 1)))
-    new_labels = np.zeros((eos_idx.shape[0], 1))
+    new_labels = np.zeros((eos_idx.shape[0], labels.shape[1]))
 
     for i, idx in enumerate(eos_idx):
         if i % 5000 == 0:
@@ -452,106 +458,9 @@ def make_grams(darrays, labels, num_grams, target_tag=EOS_PUNC, tag_order=None):
         sliced_darrays = safe_index(
             darrays, idx-num_grams, idx+num_grams+1, pad=True).flatten()
         new_darrays[i, :] = sliced_darrays
-        new_labels[i, 0] = labels[idx]
+        new_labels[i, :] = labels[idx, :]
 
     return (new_darrays, new_labels)
-
-
-'''
-Neural network setup to map tokens into sentence
-or non-sentence endings (binary classification)
-
-'''
-
-def init_random_params(scale, layer_sizes, rs=npr.RandomState(0)):
-    """
-    Build a list of (weights, biases) tuples,
-    one for each layer in the net.
-
-    """
-    return [(scale * rs.randn(m, n),   # weight matrix
-             scale * rs.randn(n))      # bias vector
-            for m, n in zip(layer_sizes[:-1], layer_sizes[1:])]
-
-
-def neural_net_predict(params, inputs):
-    """
-    Implements a deep neural network for classification.
-    params is a list of (weights, bias) tuples.
-    inputs is an (N x D) matrix.
-    returns normalized class log-probabilities.
-
-     """
-    for W, b in params:
-        outputs = np.dot(inputs, W) + b
-        inputs = np.tanh(outputs)
-    return outputs - logsumexp(outputs, axis=1, keepdims=True)
-
-
-def l2_norm(params):
-    """
-    Computes l2 norm of params by flattening them into a vector.
-
-    """
-    flattened, _ = flatten(params)
-    return np.dot(flattened, flattened)
-
-
-def log_posterior(params, inputs, targets, L2_reg):
-    log_prior = -L2_reg * l2_norm(params)
-    log_lik = np.sum(neural_net_predict(params, inputs) * targets)
-    return log_prior + log_lik
-
-
-def accuracy(params, inputs, targets):
-    target_class = np.argmax(targets, axis=1)
-    predicted_class = np.argmax(neural_net_predict(params, inputs), axis=1)
-    return np.mean(predicted_class == target_class)
-
-
-def train_nn(
-        inputs, outputs, num_hiddens,
-        batch_size=256, param_scale=0.1,
-        num_epochs=5, step_size=0.001, L2_reg=1.0):
-
-    # split data (again) into a training and a validation set
-    (tr_inputs, va_inputs), (tr_outputs, va_outputs) = ctd.split_data(
-        inputs, out_data=outputs, frac=0.80)
-
-    num_input_dims = tr_inputs.shape[1]
-    layer_sizes = [num_input_dims, num_hiddens, 1]
-    init_params = init_random_params(param_scale, layer_sizes)
-    num_batches = int(np.ceil(tr_inputs.shape[0] / batch_size))
-
-    def batch_indices(iter):
-        idx = iter % num_batches
-        return slice(idx * batch_size, (idx+1) * batch_size)
-
-    # Define training objective
-    def objective(params, iter):
-        idx = batch_indices(iter)
-        return -log_posterior(
-            params, tr_inputs[idx], tr_outputs[idx], L2_reg)
-
-    # Get gradient of objective using autograd.
-    objective_grad = grad(objective)
-
-    print("     Epoch     |    Train accuracy  |       Holdout accuracy  ")
-
-    def print_perf(params, iter, gradient):
-        if iter % num_batches == 0:
-            train_acc = accuracy(params, tr_inputs, tr_outputs)
-            valid_acc = accuracy(params, va_inputs, va_outputs)
-            print("{:15}|{:20}|{:20}".format(
-                iter//num_batches, train_acc, valid_acc))
-
-    # The optimizers provided can optimize lists, tuples, or dicts of
-    # parameters.
-    optimized_params = adam(
-        objective_grad, init_params, step_size=step_size,
-        num_iters=num_epochs * num_batches, callback=print_perf)
-
-    return optimized_params
 
 
 def create_features_labels(save_to_disk=False):
@@ -571,10 +480,11 @@ def create_features_labels(save_to_disk=False):
     # not efficient --> change me
     data = np.array([[t, l] for t, l in lexicon])
     tokens = data[:, 0]
-    labels = data[:, 1].astype(int)
+    labels = data[:, 1]
 
     # get features
     darrays = get_descriptor_arrays(tokens)
+    # labels = get_dummies(labels)
 
     # put into grams (give context)
     darrays, labels = make_grams(
@@ -603,13 +513,15 @@ def main():
     y_train = np.load('storage/data_nn_disambiguator/y_train.npy')
     y_test = np.load('storage/data_nn_disambiguator/y_test.npy')
 
-    trained_weights = train_nn(
-        X_train, y_train, 2,
+    trained_weights = nn.train_nn(
+        X_train, y_train, [50, 10],
         batch_size=256, param_scale=0.1,
-        num_epochs=5, step_size=0.001, L2_reg=1.0)
+        num_epochs=20, step_size=0.001, L2_reg=1.0)
 
     # save the weights
-    np.save('storage/trained_weights.np', trained_weights)
+    np.save('storage/trained_weights.npy', trained_weights)
 
-    y_pred = neural_net_predict(trained_weights, X_test)
-    print("auc: {}".format(ctd.get_auc(y_test, y_pred)))
+    y_pred = nn.neural_net_predict(trained_weights, X_test)
+    # don't forget to exp
+    print("auc: {}".format(
+        ctd.get_auc(y_test[:, 1], np.exp(y_pred))))
