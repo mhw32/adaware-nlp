@@ -1,1 +1,0 @@
-DATABASE = 'neo4j-dev'

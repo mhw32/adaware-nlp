@@ -1,0 +1,6 @@
+DATABASE = 'neo4j-dev'
+DATABASE_HOST = 'localhost'
+DATABASE_USER = 'neo4j'
+DATABASE_PASS = 'neo5j'
+DATABASE_PORT = 7687
+DEBUG = True
