@@ -18,8 +18,6 @@ else:
     app.config.from_object('conf.dev')
     print "Running flask using default conf.dev"
 
-from graph import *
-
 @app.route('/')
 def index():
     return render_template('index.html')
