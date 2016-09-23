@@ -93,7 +93,6 @@ def init_prior_pos_proba(
     cat_lookup = group_categories()
     num_tags = descriptor_array.shape[0]
     tag_counts = defaultdict(lambda: np.zeros(num_tags))
-    tag_counts = defaultdict(lambda: np.zeros(num_tags))
 
     # loop through words and fill out freq
     for word, tag_bunch in lexicon:
@@ -269,13 +268,14 @@ def get_descriptor_arrays(
 
 
 def get_dummies(outputs):
+    # only works for 1-D outputs
     uniq_outputs = np.unique(outputs)
     num_outputs = outputs.shape[0]
 
     dummies = np.zeros((num_outputs, uniq_outputs.shape[0]))
     for i, row in enumerate(outputs):
-        row_idx = np.where(uniq_outputs == row)[0][0]
-        dummies[i, row_idx] = 1
+        col_idx = np.where(uniq_outputs == row)[0][0]
+        dummies[i, col_idx] = 1
 
     return dummies
 
@@ -338,7 +338,7 @@ def group_categories():
     mapper["JJS"] = [MODIFIER]                    # semantically superlative adjective [chief, top]
     mapper["JJT"] = [MODIFIER]                    # morphologically superlative adjective [ biggest ]
     mapper["MD"] = [OTHERS]                       # modal auxiliary [can, should, will]
-    mapper["NC"] = [ARTICLE]                      # cited word (hypenated after regular tag)
+    mapper["NC"] = [OTHERS]                      # cited word (hypenated after regular tag)
     mapper["NN"] = [NOUN]                         # singular or mass noun
     mapper["NN$"] = [NOUN, POSSESSIVE]            # possessive singular noun
     mapper["NNS"] = [NOUN]                        # plural noun
@@ -484,7 +484,7 @@ def create_features_labels(save_to_disk=False):
 
     # get features
     darrays = get_descriptor_arrays(tokens)
-    # labels = get_dummies(labels)
+    labels = get_dummies(labels)
 
     # put into grams (give context)
     darrays, labels = make_grams(

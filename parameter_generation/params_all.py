@@ -11,6 +11,7 @@ import glob
 
 from prompt import *
 from params_sents import *
+from params_sent_weights import *
 
 if __name__ == '__main__':
     confirm_params_override(['storage/'], ensure_prompt=True)
@@ -20,3 +21,4 @@ if __name__ == '__main__':
         os.remove(os.path.join(params_dir, f))
 
     SentenceParams.write_params()
+    SentenceWeightParams.write_params()
