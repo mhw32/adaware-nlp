@@ -26,6 +26,7 @@ import nn
 
 from constants import *
 import create_toy_data as ctd
+from metrics import get_auc
 from collections import defaultdict
 
 
@@ -92,7 +93,6 @@ def init_prior_pos_proba(
 
     cat_lookup = group_categories()
     num_tags = descriptor_array.shape[0]
-    tag_counts = defaultdict(lambda: np.zeros(num_tags))
     tag_counts = defaultdict(lambda: np.zeros(num_tags))
 
     # loop through words and fill out freq
@@ -338,7 +338,7 @@ def group_categories():
     mapper["JJS"] = [MODIFIER]                    # semantically superlative adjective [chief, top]
     mapper["JJT"] = [MODIFIER]                    # morphologically superlative adjective [ biggest ]
     mapper["MD"] = [OTHERS]                       # modal auxiliary [can, should, will]
-    mapper["NC"] = [ARTICLE]                      # cited word (hypenated after regular tag)
+    mapper["NC"] = [OTHERS]                       # cited word (hypenated after regular tag)
     mapper["NN"] = [NOUN]                         # singular or mass noun
     mapper["NN$"] = [NOUN, POSSESSIVE]            # possessive singular noun
     mapper["NNS"] = [NOUN]                        # plural noun
@@ -484,7 +484,7 @@ def create_features_labels(save_to_disk=False):
 
     # get features
     darrays = get_descriptor_arrays(tokens)
-    # labels = get_dummies(labels)
+    labels = get_dummies(labels)
 
     # put into grams (give context)
     darrays, labels = make_grams(
@@ -524,4 +524,4 @@ def main():
     y_pred = nn.neural_net_predict(trained_weights, X_test)
     # don't forget to exp
     print("auc: {}".format(
-        ctd.get_auc(y_test[:, 1], np.exp(y_pred))))
+        get_auc(y_test[:, 1], np.exp(y_pred))))
