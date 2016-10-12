@@ -12,8 +12,8 @@ import sys
 project_path = os.path.join(os.path.dirname(__file__), '../')
 sys.path.append(project_path)
 
-from disambiguator import *
-from prompt import *
+from disambiguator import init_prior_pos_proba
+from prompt import confirm_params_override
 
 class SentenceParams:
 

@@ -9,9 +9,9 @@
 import os
 import glob
 
-from prompt import *
-from params_sents import *
-from params_sent_weights import *
+from prompt import confirm_params_override
+from params_sents import SentenceParams
+from params_sent_weights import SentenceWeightParams
 
 if __name__ == '__main__':
     confirm_params_override(['storage/'], ensure_prompt=True)

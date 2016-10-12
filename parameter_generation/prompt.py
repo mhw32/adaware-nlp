@@ -1,6 +1,15 @@
 import os
 
 def confirm_params_override(files, ensure_prompt=False):
+    '''
+        Prints a prompt to ensure users are okay with removing parameter files from their system
+
+        Input:
+        (array) files/directories to be removed
+        (bool) to force the prompt to be printed. By default, only prints if the specified
+                files exist and will be overridden.
+    '''
+
     will_override = False
     project_base = os.path.join(os.path.dirname(os.path.abspath(__file__)), '../')
     project_base = os.path.abspath(project_base)
