@@ -8,7 +8,6 @@ import os
 import nltk
 import util
 import numpy as np
-from sklearn.metrics import roc_curve, auc
 
 IGNORE_FILES = [
     '.DS_Store',
@@ -157,23 +156,3 @@ def split_data(in_data, out_data=None, frac=0.80):
         return (tr_in_data, te_in_data), (tr_out_data, te_out_data)
 
     return (tr_in_data, te_in_data)
-
-def get_auc(outputs, probas):
-    ''' AUC is a common metric for binary classification
-        methods by comparing true & false positive rates
-
-        Args
-        ----
-        outputs : numpy array
-                 true outcomes (OxTxN)
-
-        probas : numpy array
-                 predicted probabilities (OxTxN)
-
-        Returns
-        -------
-        auc : integer
-    '''
-
-    fpr, tpr, _ = roc_curve(outputs, probas[:, 1])
-    return auc(fpr, tpr)

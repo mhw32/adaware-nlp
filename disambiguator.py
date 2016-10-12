@@ -26,6 +26,7 @@ import nn
 
 from constants import *
 import create_toy_data as ctd
+from metrics import get_auc
 from collections import defaultdict
 
 
@@ -338,7 +339,7 @@ def group_categories():
     mapper["JJS"] = [MODIFIER]                    # semantically superlative adjective [chief, top]
     mapper["JJT"] = [MODIFIER]                    # morphologically superlative adjective [ biggest ]
     mapper["MD"] = [OTHERS]                       # modal auxiliary [can, should, will]
-    mapper["NC"] = [OTHERS]                      # cited word (hypenated after regular tag)
+    mapper["NC"] = [OTHERS]                       # cited word (hypenated after regular tag)
     mapper["NN"] = [NOUN]                         # singular or mass noun
     mapper["NN$"] = [NOUN, POSSESSIVE]            # possessive singular noun
     mapper["NNS"] = [NOUN]                        # plural noun
@@ -524,4 +525,4 @@ def main():
     y_pred = nn.neural_net_predict(trained_weights, X_test)
     # don't forget to exp
     print("auc: {}".format(
-        ctd.get_auc(y_test[:, 1], np.exp(y_pred))))
+        get_auc(y_test[:, 1], np.exp(y_pred))))
