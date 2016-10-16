@@ -28,6 +28,9 @@ def batch_index_generator(n, batch_size=50):
 def sigmoid(x):
     return 0.5*(np.tanh(x) + 1.0)
 
+def relu(x):
+    return np.maximum(0, x)
+
 def concat_and_multiply(weights, *args):
     cat_state = np.hstack(args + (np.ones((args[0].shape[0], 1)),))
     return np.dot(cat_state, weights)
