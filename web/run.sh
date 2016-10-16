@@ -14,4 +14,14 @@ else
     fi
 fi
 
-FLASK_DEBUG=1 FLASK_APP=smart_summary.py flask run --host 0.0.0.0 --port ${PORT}
+if [ -z ${SS_ENV} ]; then
+    SS_ENV="dev"
+    export FLASK_DEBUG=1
+elif [ "${SS_ENV}" = "dev" ]; then
+    export FLASK_DEBUG=1
+fi
+
+export FLASK_ENV=${SS_ENV}
+export GRAPH_ENV=${SS_ENV}
+
+FLASK_APP=smart_summary.py flask run --host 0.0.0.0 --port ${PORT}
