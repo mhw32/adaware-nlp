@@ -78,6 +78,28 @@ class Dolphin(object):
         self.service = service
 
     def _search_folder(self, parent, recursive=False, name='root', tree={}):
+        """ Returns a list of GDrive File Objects
+
+            Args
+            ----
+            parent : int
+                     id of folder
+            recursive : bool
+                        should go into each folder?
+            name : string
+                   name of root folder
+
+            Example
+            -------
+            client_id = os.environ['ADA_GOOGLE_CLIENT_ID']
+            client_secret = os.environ['ADA_GOOGLE_CLIENT_SECRET']
+            credentials_file = os.path.abspath('_passwords/Adaware-054594a036d1.json')
+
+            dolphin = Dolphin(client_id, client_secret, credentials_file)
+            dolphin.connect()
+            print(dolphin._search_folder('0B6JRxhFLmKU0ak4xSUwwYnZld2c', recursive=True, name='Ada'))
+
+        """
         if self.service is None:
             raise ValueError('please connect() first.')
 
@@ -99,6 +121,13 @@ class Dolphin(object):
                         tree[name] = [f]
 
         return tree
+
+    def _name_to_id(self, name):
+        if self.service is None:
+            raise ValueError('please connect() first.')
+
+        files = self.service.files().list(q="name='{}'".format(name)).execute()
+        return [f['id'] for f in files['files']]
 
     def _download_file(self, drive_file, write_file):
         """ Download a file's content.
@@ -127,10 +156,29 @@ class Dolphin(object):
             print('The file doesn\'t have any content stored on Drive.')
             return None
 
-client_id = os.environ['ADA_GOOGLE_CLIENT_ID']
-client_secret = os.environ['ADA_GOOGLE_CLIENT_SECRET']
-credentials_file = os.path.abspath('_passwords/Adaware-054594a036d1.json')
+    def download(self, folder_name, output_folder):
+        """ Recursively downloads all things within a folder
 
-dolphin = Dolphin(client_id, client_secret, credentials_file)
-dolphin.connect()
-print(dolphin._search_folder('0B6JRxhFLmKU0ak4xSUwwYnZld2c', recursive=True))
+            Args
+            ----
+            folder_name : string
+                          name of outermost folder
+            output_folder : string
+                            place to save data
+        """
+
+        folder_id = self._name_to_id(folder_name)
+        if folder_id:
+            folder_id = folder_id[0]
+            content_objs = self._search_folder(folder_id,
+                                               recursive=True,
+                                               name='Ada')
+
+            for new_folder in content_objs.keys():
+                full_path = os.path.join(output_folder, new_folder)
+                if not os.path.exists(full_path):
+                    os.makedirs(full_path)
+
+                for new_file in content_objs['new_folder']:
+                    self._download_file(new_file, os.path.join(full_path, new_file))
+
