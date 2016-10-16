@@ -93,3 +93,4 @@ storage/*
 !storage/.gitkeep
 !storage/data_nn_disambiguator/.gitkeep
 datasets/*
+data_ocean/_passwords/
