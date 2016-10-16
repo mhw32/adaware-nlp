@@ -23,8 +23,9 @@
     - build co-occurrences by sliding n-gram window
     - train GloVe to optimize parameters
 
-    Lots of help from:
-    https://github.com/hans/glove.py/blob/master/glove.py
+    Paper:
+    http://www-nlp.stanford.edu/projects/glove/
+    http://www-nlp.stanford.edu/pubs/glove.pdf
 
 """
 

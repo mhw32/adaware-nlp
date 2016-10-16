@@ -42,7 +42,7 @@ class Dolphin(object):
         self.redirect_uri = redirect_uri
         self.service = None
 
-    def get_credentials():
+    def get_credentials(self):
         """Gets valid user credentials from storage.
 
         If nothing has been stored, or if the stored credentials are invalid,
@@ -61,17 +61,16 @@ class Dolphin(object):
         store = Storage(credential_path)
         credentials = store.get()
         if not credentials or credentials.invalid:
-            flow = client.flow_from_clientsecrets(self.client_secret, self.oauth_scope)
-            flow.user_agent = self.application_name
-            if flags:
-                credentials = tools.run_flow(flow, store, flags)
-            else: # Needed only for compatibility with Python 2.6
-                credentials = tools.run(flow, store)
+            flow = OAuth2WebServerFlow(client_id=self.client_id,
+                                       client_secret=self.client_secret,
+                                       scope=self.oauth_scope,
+                                       redirect_uri=self.redirect_uri)
+            credentials = tools.run_flow(flow, store)
             print('Storing credentials to ' + credential_path)
         return credentials
 
     def connect(self):
-        credentials = get_credentials()
+        credentials = self.get_credentials()
         http = credentials.authorize(httplib2.Http())
         service = discovery.build('drive', 'v3', http=http)
 
@@ -82,7 +81,7 @@ class Dolphin(object):
         if self.service is None:
             raise ValueError('please connect() first.')
 
-        results = service.files().list(
+        results = self.service.files().list(
                 pageSize=10,fields="nextPageToken, files(id, name)").execute()
         items = results.get('files', [])
         if not items:
