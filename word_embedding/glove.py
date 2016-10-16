@@ -146,6 +146,7 @@ def build_vocab(corpus):
     return d
 
 
+@listify
 def build_cooccur_mat(vocab,
                       corpus,
                       window_size=10,
@@ -173,7 +174,7 @@ def build_cooccur_mat(vocab,
 
     """
     vocab_size = len(vocab)
-    id2word =  = dict((i, word) for word, (i, _) in vocab.iteritems())
+    id2word = dict((i, word) for word, (i, _) in vocab.iteritems())
 
     # Collect cooccurrences internally as a sparse matrix
     cooccurrences = sparse.lil_matrix((vocab_size, vocab_size),
@@ -181,7 +182,7 @@ def build_cooccur_mat(vocab,
 
     for i, line in enumerate(corpus):
         if i % 1000 == 0:
-            print("Building cooccurrence matrix: on line %i", i)
+            print("Building cooccurrence matrix: on line {}".format(i))
 
         tokens = line.strip().split()
         token_ids = [vocab[word][0] for word in tokens]
@@ -327,7 +328,7 @@ def update_glove(vocab, data, learning_rate=0.05, x_max=100, alpha=0.75):
         # --> J' = w_i^Tw_j + b_i + b_j - log(X_{ij}) $$
         cost_inner = (v_main.dot(v_context)
                       + b_main[0] + b_context[0]
-                      - log(cooccurrence))
+                      - math.log(cooccurrence))
 
         # compute cost --> J = f(X_{ij}) (J')^2 $$
         cost = weight * (cost_inner ** 2)
@@ -359,6 +360,6 @@ def update_glove(vocab, data, learning_rate=0.05, x_max=100, alpha=0.75):
 
     return global_cost
 
-def save_glove(W, path)
+def save_glove(W, path):
     with open(path, 'wb') as f:
         pickle.dump(W, f, protocol=2)

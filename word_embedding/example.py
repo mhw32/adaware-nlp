@@ -1,5 +1,4 @@
 import numpy as np
-import evaluate
 import glove
 from nose.tools import assert_equal
 
@@ -19,10 +18,10 @@ Sometimes I build a graph
 Sometimes I build trees""").split("\n")
 
 vocab = glove.build_vocab(test_corpus)
-cooccur = glove.build_cooccur(vocab,
-                              test_corpus,
-                              window_size=10)
-id2word = evaluate.make_id2word(vocab)
+cooccur = glove.build_cooccur_mat(vocab,
+                                  test_corpus,
+                                  window_size=10)
+id2word = glove.make_id2word(vocab)
 
 W = glove.train_glove(vocab,
                       cooccur,
@@ -30,7 +29,8 @@ W = glove.train_glove(vocab,
                       iterations=500)
 
 # Merge and normalize word vectors
-W = evaluate.merge_main_context(W)
+W = glove.merge_main_context(W)
 
-similar = evaluate.most_similar(W, vocab, id2word, 'graph')
+similar = glove.most_similar(W, vocab, id2word, 'graph')
+print(similar)
 assert_equal('trees', similar[0])
