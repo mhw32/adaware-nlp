@@ -22,18 +22,12 @@ from __future__ import print_function
 import numpy as np
 import nltk
 import cPickle
+import nn
 
 from constants import *
 import create_toy_data as ctd
+from metrics import get_auc
 from collections import defaultdict
-
-# load in libraries for NN
-import autograd.numpy as np
-import autograd.numpy.random as npr
-from autograd.scipy.misc import logsumexp
-from autograd import grad
-from autograd.util import flatten
-from optimizers import adam
 
 
 def get_loc_in_array(value, array):
@@ -43,8 +37,9 @@ def get_loc_in_array(value, array):
         return find[0]
     raise RuntimeError("Couldn't find value: {} in array".format(value))
 
+
 def init_prior_pos_proba(
-        lexicon=None, simplify_tags=True):
+        lexicon=None, simplify_tags=True, save_to_disk=False):
     ''' Set prior proba probabilities using
         the part-of-speech frequencies for
         every word in a given lexicon. Default
@@ -53,12 +48,15 @@ def init_prior_pos_proba(
         Args
         ----
         lexicon : list of tuples
-                each tuple is (word, part-of-speech)
+                  each tuple is (word, part-of-speech)
 
         simplify_tags : boolean
-                many of the tags have additional info
-                like IN-HL or HVZ*. Setting simplify_tags
-                to True, ignores these additional tags.
+                        many of the tags have additional info
+                        like IN-HL or HVZ*. Setting simplify_tags
+                        to True, ignores these additional tags.
+
+        save_to_disk : boolean
+                       write frequencies to a pickle file
 
         Returns
         -------
@@ -69,7 +67,7 @@ def init_prior_pos_proba(
     if lexicon is None:
         lexicon = ctd.load_data(
             ctd.brown_generator(), return_tags=True)
-    
+
     descriptor_array = np.array([
         NOUN,
         VERB,
@@ -112,7 +110,7 @@ def init_prior_pos_proba(
         for tt in tag_bunch.split('-'):
             for single_tag in tt.split('+'):
                 # print("tag_bunch: {} || single_tag: {}".format(tag_bunch, single_tag))
-                    
+
                 reduced_tags = cat_lookup(single_tag)
 
                 if reduced_tags is None and single_tag in ['``', "''", '', "'", 'HL', 'FW', 'NC', 'TL']:
@@ -133,11 +131,12 @@ def init_prior_pos_proba(
                 for reduced_tag in reduced_tags:
                     tag_idx = get_loc_in_array(reduced_tag, descriptor_array)
                     tag_counts[word][tag_idx] += 1
-                
-    with open('storage/brown_tag_distribution.pkl', 'wb') as f:
-        cPickle.dump(dict(tag_counts), f)
-    with open('storage/brown_tag_order.pkl', 'wb') as f:
-        cPickle.dump(descriptor_array, f)
+
+    if save_to_disk:
+        with open('storage/brown_tag_distribution.pkl', 'wb') as f:
+            cPickle.dump(dict(tag_counts), f)
+        with open('storage/brown_tag_order.pkl', 'wb') as f:
+            cPickle.dump(descriptor_array, f)
 
     return tag_counts
 
@@ -201,7 +200,10 @@ def get_descriptor_arrays(
 
     desc_arrays = []
     prev_token = None
-    for token in tokens:
+    for token_cnt, token in enumerate(tokens):
+        if token_cnt % 10000 == 0:
+            print('----------------------')
+            print('processing: token ({}/{})'.format(token_cnt, len(tokens)))
         token_in_lexicon = False
         if token in tag_counts:
             token_in_lexicon = True
@@ -231,7 +233,7 @@ def get_descriptor_arrays(
             elif is_abbrev(token):
                 cur_tag_count[get_loc_in_array(ABBREV, tag_order)] += 1
             elif has_hyphen(token):
-                cur_tag_count[get_loc_in_array('UHW', tag_order)] += 1
+                cur_tag_count[get_loc_in_array(OTHERS, tag_order)] += 1
                 # TODO: don't know how to lookup this...
             else:
                 cur_tag_count = np.ones(num_tags)
@@ -259,11 +261,23 @@ def get_descriptor_arrays(
 
         if prev_token and has_eos_punc(prev_token):
             cur_tag_distrib[get_loc_in_array(FOLLOWS_EOS_PUNC, tag_order)] = 1
-        
+
         prev_token = token
         desc_arrays.append(cur_tag_distrib)
 
     return np.array(desc_arrays)
+
+
+def get_dummies(outputs):
+    uniq_outputs = np.unique(outputs)
+    num_outputs = outputs.shape[0]
+
+    dummies = np.zeros((num_outputs, uniq_outputs.shape[0]))
+    for i, row in enumerate(outputs):
+        row_idx = np.where(uniq_outputs == row)[0][0]
+        dummies[i, row_idx] = 1
+
+    return dummies
 
 
 def group_categories():
@@ -311,8 +325,8 @@ def group_categories():
     mapper["DTS"] = [OTHERS]                      # plural determiner
     mapper["DTX"] = [CONJUNCTION]                 # determiner/double conjunction [either]
     mapper["EX"] = [OTHERS]                       # existentil there
-    mapper["FW"] = None                           # foreign word (hyphenated before regular tag)
-    mapper["HL"] = None                           # word occurring in headline (hyphenated after regular tag)
+    mapper["FW"] = [OTHERS]                       # foreign word (hyphenated before regular tag)
+    mapper["HL"] = [OTHERS]                       # word occurring in headline (hyphenated after regular tag)
     mapper["HV"] = [VERB]                         # have
     mapper["HVD"] = [VERB]                        # had (past tense)
     mapper["HVG"] = [VERB]                        # having
@@ -320,11 +334,11 @@ def group_categories():
     mapper["HVZ"] = [VERB]                        # has
     mapper["IN"] = [PREPOSITION]                  # preposition
     mapper["JJ"] = [MODIFIER]                     # adjective
-    mapper["JJR"] = [MODIFIER]                    # comparative adjective 
+    mapper["JJR"] = [MODIFIER]                    # comparative adjective
     mapper["JJS"] = [MODIFIER]                    # semantically superlative adjective [chief, top]
     mapper["JJT"] = [MODIFIER]                    # morphologically superlative adjective [ biggest ]
     mapper["MD"] = [OTHERS]                       # modal auxiliary [can, should, will]
-    mapper["NC"] = None                           # cited word (hypenated after regular tag)
+    mapper["NC"] = [OTHERS]                       # cited word (hypenated after regular tag)
     mapper["NN"] = [NOUN]                         # singular or mass noun
     mapper["NN$"] = [NOUN, POSSESSIVE]            # possessive singular noun
     mapper["NNS"] = [NOUN]                        # plural noun
@@ -337,7 +351,7 @@ def group_categories():
     mapper["NRS"] = [NOUN, MODIFIER]              # plural adverbial noun
     mapper["OD"] = [NUMBER]                       # ordinal numeral [first, 2nd]
     mapper["PN"] = [PRONOUN]                      # nominal pronoun [everybody, nothing]
-    mapper["PN$"] = [PRONOUN, POSSESSIVE]         # possessive nominal pronoun    
+    mapper["PN$"] = [PRONOUN, POSSESSIVE]         # possessive nominal pronoun
     mapper["PP$"] = [PRONOUN, POSSESSIVE]         # possessive personal pronoun [my, our]
     mapper["PP$$"] = [PRONOUN, POSSESSIVE]        # second (nominal) possessive pronoun [mine, ours]
     mapper["PPL"] = [PRONOUN]                     # singular reflexive/intensive personal pronoun [myself]
@@ -352,10 +366,10 @@ def group_categories():
     mapper["RBT"] = [MODIFIER]                    # superlative adverb
     mapper["RN"] = [MODIFIER]                     # nominal adverb [here then, inddors]
     mapper["RP"] = [MODIFIER]                     # adverb/participle [about, off, up]
-    mapper["TL"] = None                           # word occuring in title (hyphenated after regular tag)
+    mapper["TL"] = [OTHERS]                       # word occuring in title (hyphenated after regular tag)
     mapper["TO"] = [OTHERS]                       # infinitive marker to
     mapper["UH"] = [OTHERS]                       # interjection, exclamation
-    mapper["UNK"] =  None                         # unknown CUSTOM TAG
+    mapper["UNK"] = [OTHERS]                      # unknown CUSTOM TAG
     mapper["VB"] = [VERB]                         # verb, base form
     mapper["VBD"] = [VERB]                        # verb, past tense
     mapper["VBG"] = [VERB]                        # verb, present participle/gerund
@@ -371,95 +385,143 @@ def group_categories():
     f = lambda x: mapper[x] if x in mapper else None
     return f
 
-'''
-Neural network setup to map tokens into sentence
-or non-sentence endings (binary classification)
 
-'''
+def safe_index(A, s, e, pad=False):
+    # safe indexing
+    num_col = A.shape[1]
+    pre = np.zeros((0, num_col))
+    post = np.zeros((0, num_col))
 
+    if s < 0:
+        pre = np.zeros((-s, num_col))
+        s = 0
 
-def init_random_params(scale, layer_sizes, rs=npr.RandomState(0)):
-    """
-    Build a list of (weights, biases) tuples,
-    one for each layer in the net.
+    if e > A.shape[0]:
+        post = np.zeros((e - A.shape[0], num_col))
+        e = A.shape[0]
 
-    """
-    return [(scale * rs.randn(m, n),   # weight matrix
-             scale * rs.randn(n))      # bias vector
-            for m, n in zip(layer_sizes[:-1], layer_sizes[1:])]
-
-
-def neural_net_predict(params, inputs):
-    """
-    Implements a deep neural network for classification.
-    params is a list of (weights, bias) tuples.
-    inputs is an (N x D) matrix.
-    returns normalized class log-probabilities.
-
-     """
-    for W, b in params:
-        outputs = np.dot(inputs, W) + b
-        inputs = np.tanh(outputs)
-    return outputs - logsumexp(outputs, axis=1, keepdims=True)
+    if pad:
+        return np.concatenate((pre, A[s:e], post))
+    return A[s:e]
 
 
-def l2_norm(params):
-    """
-    Computes l2 norm of params by flattening them into a vector.
+def make_grams(darrays, labels, num_grams, target_tag=EOS_PUNC, tag_order=None):
+    ''' Given darrays, only take the ones that have a certain
+        label. Then take k/2 neighbors from either side.
 
-    """
-    flattened, _ = flatten(params)
-    return np.dot(flattened, flattened)
+        Args
+        ----
+        darrays : np array
+                 descriptor array
+
+        labels : np array
+                 output array
+
+        num_grams : integer
+                    num of surrounding grams
+                    if num_grams = 3, 3 on each side
+                    will be taken.
+
+        target_tag : string
+                     what tag to index to look for
+
+        tag_order : array
+                    list of tags
+
+        Returns
+        -------
+        new_darrays : np array
+                     gram'd descriptor array
+
+        new_labels : np array
+                     gram'd labels
+    '''
+
+    if tag_order is None:
+        tag_order = cPickle.load(
+            open('storage/brown_tag_order.pkl', 'rb'))
+
+    if not target_tag in tag_order:
+        raise ValueError('Target tag not found in tag order.')
+
+    target_idx = np.where(tag_order == target_tag)[0][0]
+    eos_idx = np.where(darrays[:,target_idx] > 0)[0]
+
+    new_darrays = np.zeros((eos_idx.shape[0],darrays.shape[1]*(2*num_grams + 1)))
+    new_labels = np.zeros((eos_idx.shape[0], labels.shape[1]))
+
+    for i, idx in enumerate(eos_idx):
+        if i % 5000 == 0:
+            print('---------------------')
+            print('finding: end-of-sentence ({}/{})'.format(i, eos_idx.shape[0]))
+
+        sliced_darrays = safe_index(
+            darrays, idx-num_grams, idx+num_grams+1, pad=True).flatten()
+        new_darrays[i, :] = sliced_darrays
+        new_labels[i, :] = labels[idx, :]
+
+    return (new_darrays, new_labels)
 
 
-def log_posterior(params, inputs, targets, L2_reg):
-    log_prior = -L2_reg * l2_norm(params)
-    log_lik = np.sum(neural_net_predict(params, inputs) * targets)
-    return log_prior + log_lik
+def create_features_labels(save_to_disk=False):
+    ''' Use pipeline to generate the (input, output)
+        pairs for machine learning
+
+        Args
+        ----
+        save_to_disk : boolean
+                       write frequencies to a pickle file
+
+    '''
+
+    lexicon = ctd.load_data(
+        ctd.brown_generator(), return_sent_labels=True)
+
+    # not efficient --> change me
+    data = np.array([[t, l] for t, l in lexicon])
+    tokens = data[:, 0]
+    labels = data[:, 1]
+
+    # get features
+    darrays = get_descriptor_arrays(tokens)
+    labels = get_dummies(labels)
+
+    # put into grams (give context)
+    darrays, labels = make_grams(
+        darrays, labels, 3, target_tag=EOS_PUNC)
+
+    (tr_inputs, te_inputs), (tr_outputs, te_outputs) = ctd.split_data(
+        darrays, out_data=labels, frac=0.80)
+
+    if save_to_disk:
+        np.save('storage/data_nn_disambiguator/X_train.npy', tr_inputs)
+        np.save('storage/data_nn_disambiguator/X_test.npy', te_inputs)
+        np.save('storage/data_nn_disambiguator/y_train.npy', tr_outputs)
+        np.save('storage/data_nn_disambiguator/y_test.npy', te_outputs)
+
+    return (tr_inputs, te_inputs), (tr_outputs, te_outputs)
 
 
-def accuracy(params, inputs, targets):
-    target_class = np.argmax(targets, axis=1)
-    predicted_class = np.argmax(neural_net_predict(params, inputs), axis=1)
-    return np.mean(predicted_class == target_class)
+def main():
+    ''' Paper found parameters to be efficient:
+        6 word contexts --> 3 num_grams
+        2 hidden_units
+    '''
 
+    X_train = np.load('storage/data_nn_disambiguator/X_train.npy')
+    X_test = np.load('storage/data_nn_disambiguator/X_test.npy')
+    y_train = np.load('storage/data_nn_disambiguator/y_train.npy')
+    y_test = np.load('storage/data_nn_disambiguator/y_test.npy')
 
-def train_nn(
-        tr_obs_set, tr_out_set, num_hiddens,
+    trained_weights = nn.train_nn(
+        X_train, y_train, [50, 10],
         batch_size=256, param_scale=0.1,
-        num_epochs=5, step_size=0.001, L2_reg=1.0):
+        num_epochs=20, step_size=0.001, L2_reg=1.0)
 
-    num_input_dims = tr_obs_set.shape[1]
-    layer_sizes = [num_input_dims, num_hiddens, 1]
-    init_params = init_random_params(param_scale, layer_sizes)
-    num_batches = int(np.ceil(tr_obs_set.shape[0] / batch_size))
+    # save the weights
+    np.save('storage/trained_weights.npy', trained_weights)
 
-    def batch_indices(iter):
-        idx = iter % num_batches
-        return slice(idx * batch_size, (idx+1) * batch_size)
-
-    # Define training objective
-    def objective(params, iter):
-        idx = batch_indices(iter)
-        return -log_posterior(
-            params, tr_obs_set[idx], tr_out_set[idx], L2_reg)
-
-    # Get gradient of objective using autograd.
-    objective_grad = grad(objective)
-
-    print("     Epoch     |    Train accuracy  |       Test accuracy  ")
-
-    def print_perf(params, iter, gradient):
-        if iter % num_batches == 0:
-            train_acc = accuracy(params, tr_obs_set, tr_out_set)
-            test_acc = accuracy(params, test_images, test_labels)
-            print("{:15}|{:20}|{:20}".format(
-                iter//num_batches, train_acc, test_acc))
-
-    # The optimizers provided can optimize lists, tuples, or dicts of
-    # parameters.
-    optimized_params = adam(
-        objective_grad, init_params, step_size=step_size,
-        num_iters=num_epochs * num_batches, callback=print_perf)
-
-    return optimized_params
+    y_pred = nn.neural_net_predict(trained_weights, X_test)
+    # don't forget to exp
+    print("auc: {}".format(
+        get_auc(y_test[:, 1], np.exp(y_pred))))

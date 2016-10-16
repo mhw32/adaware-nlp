@@ -1,4 +1,4 @@
-# smart-summary
+# Ada
 
 Goal of this app is given a piece of text, image, or video, extract information, and output a summarized version. By doing so, the algorithm should produce a knowledge graph where the user can ask more questions about the text.
 
@@ -22,4 +22,3 @@ With the ability to convert data into a knowledge graph, the summarization tool 
 - App
 	- Chrome Extension
 	- Server to store the knowledge graph (try neo4j)
-	- Get
