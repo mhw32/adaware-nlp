@@ -269,13 +269,14 @@ def get_descriptor_arrays(
 
 
 def get_dummies(outputs):
+    # only works for 1-D outputs
     uniq_outputs = np.unique(outputs)
     num_outputs = outputs.shape[0]
 
     dummies = np.zeros((num_outputs, uniq_outputs.shape[0]))
     for i, row in enumerate(outputs):
-        row_idx = np.where(uniq_outputs == row)[0][0]
-        dummies[i, row_idx] = 1
+        col_idx = np.where(uniq_outputs == row)[0][0]
+        dummies[i, col_idx] = 1
 
     return dummies
 
