@@ -55,7 +55,8 @@ def listify(fn):
 
 
 def make_id2word(vocab):
-    return dict((id, word) for word,(id,_) in vocab.iteritems())
+    return dict((id, word) for word, (id, _) in vocab.iteritems())
+
 
 def load_object(path, build_fn, *args, **kwargs):
     """ load from serialized form or build an object, saving the built
@@ -143,7 +144,7 @@ def build_vocab(corpus):
         tokens = line.strip().split()
         vocab.update(tokens)
 
-    d = {word:(i, freq) for i,(word,freq) in enumerate(vocab.iteritems())}
+    d = {word: (i, freq) for i, (word, freq) in enumerate(vocab.iteritems())}
     return d
 
 
@@ -152,7 +153,6 @@ def build_cooccur_mat(vocab,
                       corpus,
                       window_size=10,
                       min_count=None):
-
     """ construct the cooccurence matr ix .
 
         Args
@@ -191,7 +191,7 @@ def build_cooccur_mat(vocab,
         for center_i, center_id in enumerate(token_ids):
 
             # collect all word IDs in left window of center word
-            context_ids = token_ids[max(0, center_i - window_size) : center_i]
+            context_ids = token_ids[max(0, center_i - window_size): center_i]
             contexts_len = len(context_ids)
 
             for left_i, left_id in enumerate(context_ids):
@@ -251,7 +251,8 @@ def train_glove(vocab,
     #
     # Pennington et al. (2014) suggest adding or averaging the
     # two for each word, or discarding the context vectors.
-    W = (np.random.rand(vocab_size * 2, vector_size) - 0.5) / float(vector_size + 1)
+    W = (np.random.rand(vocab_size * 2, vector_size) - 0.5) / \
+        float(vector_size + 1)
 
     # bias terms, each associated with a single vector. An array of size
     # $2V$, initialized randomly in the range (-0.5, 0.5].
@@ -272,12 +273,13 @@ def train_glove(vocab,
     gradient_squared_biases = np.ones(vocab_size * 2, dtype=np.float64)
 
     data = [(W[i_main], W[i_context + vocab_size],
-             biases[i_main : i_main + 1],
-             biases[i_context + vocab_size : i_context + vocab_size + 1],
-             gradient_squared[i_main], gradient_squared[i_context + vocab_size],
-             gradient_squared_biases[i_main : i_main + 1],
-             gradient_squared_biases[i_context + vocab_size
-                                     : i_context + vocab_size + 1],
+             biases[i_main: i_main + 1],
+             biases[i_context + vocab_size: i_context + vocab_size + 1],
+             gradient_squared[i_main], gradient_squared[
+                 i_context + vocab_size],
+             gradient_squared_biases[i_main: i_main + 1],
+             gradient_squared_biases[
+                 i_context + vocab_size: i_context + vocab_size + 1],
              cooccurrence)
             for i_main, i_context, cooccurrence in cooccurrences]
 
@@ -351,7 +353,7 @@ def update_glove(vocab, data, learning_rate=0.05, x_max=100, alpha=0.75):
 
         b_main -= (learning_rate * grad_bias_main / np.sqrt(gradsq_b_main))
         b_context -= (learning_rate * grad_bias_context / np.sqrt(
-                gradsq_b_context))
+            gradsq_b_context))
 
         # Update squared gradient sums
         gradsq_W_main += np.square(grad_main)
@@ -360,6 +362,7 @@ def update_glove(vocab, data, learning_rate=0.05, x_max=100, alpha=0.75):
         gradsq_b_context += grad_bias_context ** 2
 
     return global_cost
+
 
 def save_glove(W, path):
     with open(path, 'wb') as f:

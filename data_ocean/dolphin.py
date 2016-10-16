@@ -9,7 +9,7 @@ from oauth2client.file import Storage
 from apiclient.discovery import build
 from oauth2client.client import OAuth2WebServerFlow
 
-from apiclient import discovery
+from apiclient import discovery, errors
 from oauth2client import client
 from oauth2client import tools
 from oauth2client.file import Storage
@@ -42,7 +42,7 @@ class Dolphin(object):
         self.redirect_uri = redirect_uri
         self.service = None
 
-    def get_credentials(self):
+    def _get_credentials(self):
         """Gets valid user credentials from storage.
 
         If nothing has been stored, or if the stored credentials are invalid,
@@ -70,26 +70,62 @@ class Dolphin(object):
         return credentials
 
     def connect(self):
-        credentials = self.get_credentials()
+        credentials = self._get_credentials()
         http = credentials.authorize(httplib2.Http())
         service = discovery.build('drive', 'v3', http=http)
 
         self.http = http
         self.service = service
 
-    def list_files(self):
+    def _search_folder(self, parent, recursive=False, name='root', tree={}):
         if self.service is None:
             raise ValueError('please connect() first.')
 
-        results = self.service.files().list(
-                pageSize=10,fields="nextPageToken, files(id, name)").execute()
-        items = results.get('files', [])
-        if not items:
-            print('No files found.')
+        files = self.service.files().list(q= "'{}' in parents and trashed=false".format(parent)).execute()
+        tasks = files.get('files', [])
+
+        if recursive:
+            for f in tasks:
+                if f['mimeType'] == 'application/vnd.google-apps.folder':
+                    tasks = self._search_folder(f['id'],
+                                                recursive=recursive,
+                                                name=f['name'],
+                                                tree=tree)
+                    tree[f['name']] = tasks
+                else:
+                    if name in tree:
+                        tree[name].append(f)
+                    else:
+                        tree[name] = [f]
+
+        return tree
+
+    def _download_file(self, drive_file, write_file):
+        """ Download a file's content.
+
+            Args
+            ----
+            service : Drive API service instance.
+            drive_file : Drive File instance.
+
+            Returns
+            -------
+            File's content if successful, None otherwise.
+        """
+        download_url = drive_file.get('downloadUrl')
+        if download_url:
+            resp, content = service._http.request(download_url)
+            if resp.status == 200:
+                print('Status: {}'.format(resp))
+                with open(write_file, 'w') as fw:
+                    fw.write(content)
+                return
+            else:
+                print('An error occurred: {}'.format(resp))
+                return None
         else:
-            print('Files:')
-            for item in items:
-                print('{0} ({1})'.format(item['name'], item['id']))
+            print('The file doesn\'t have any content stored on Drive.')
+            return None
 
 client_id = os.environ['ADA_GOOGLE_CLIENT_ID']
 client_secret = os.environ['ADA_GOOGLE_CLIENT_SECRET']
@@ -97,4 +133,4 @@ credentials_file = os.path.abspath('_passwords/Adaware-054594a036d1.json')
 
 dolphin = Dolphin(client_id, client_secret, credentials_file)
 dolphin.connect()
-dolphin.list_files()
+print(dolphin._search_folder('0B6JRxhFLmKU0ak4xSUwwYnZld2c', recursive=True))
