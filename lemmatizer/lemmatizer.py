@@ -1,7 +1,7 @@
-""" BLSTM for lemmatization. State-of-the-art lemmatization and
+""" GRU for lemmatization. State-of-the-art lemmatization and
     stemming seems to work through large dictionary lookups and
     hardcoded chopping. Instead we can train a character-level
-    RNN to map a word to its own lemma.
+    NN to map a word to its own lemma.
 
     There will be a feature per character (padded to some max).
     The POS should also be a feature as it provides info.
@@ -18,7 +18,7 @@ sys.path.append('../common')
 from util import batch_index_generator, split_data
 
 sys.path.append('../models')
-from blstm import init_blstm_params, blstm_predict, log_likelihood
+import gru
 
 # to generate a training dataset
 from nltk import pos_tag, word_tokenize
@@ -84,18 +84,87 @@ def gen_dataset(sentences, train_test_split=True, max_size=25):
         (X_train, X_test), (y_train, y_test) = split_data(
             word_char_arr, out_data=lemma_char_arr, frac=0.80)
 
-    return (X_train, X_test), (y_train, y_test)
+        return (X_train, X_test), (y_train, y_test), char_set, pos_set, max_size
+
+    return (word_char_arr, lemma_char_arr), char_set, pos_set, max_size
 
 
-def train_lemmatizer_blstm(
-    X_train,
-    y_train,
-    X_test,
-    y_test,
+def train_lemmatizer(
+    obs_set,
+    out_set,
     num_hiddens,
     batch_size=64,
-    L1_REG=1e-5,
+    param_scale=0.01,
+    num_epochs=100,
     step_size=0.001,
-    num_iters=5000,
-    init_params=None
+    L2_reg=0
 ):
+    ''' function to train the Bi-LSTM for mapping vectorized
+        characters + POS --> a vectorized lemma
+
+        Args
+        ----
+        X_train : np array
+                  created by gen_dataset
+        y_train : np.array
+                  created by gen_dataset
+        X_test : np.array
+                 created by gen_dataset
+        y_test : np.array
+                 created by gen_dataset
+        num_hiddens : list of integers
+                      number of hidden nodes
+                      i.e. [30, 50, 1]
+        batch_size : integer
+                     size of batch in learning
+        param_scale : float
+                      size of weights if none
+        num_epochs : int
+                     number of epochs to train
+        step_size : float
+                    initial step size
+        L2_reg : float
+                 regularization constant
+    '''
+
+    trained_weights = nn.train_nn(obs_set,
+                                  out_set,
+                                  num_hiddens,
+                                  batch_size=batch_size,
+                                  param_scale=param_scale,
+                                  num_epochs=num_epochs,
+                                  step_size=step_size,
+                                  L2_reg=L2_reg)
+
+    return trained_weights
+
+
+class NeuralLemmatizer(object):
+    ''' Dummy class as a wrapper to easy load the weights and use
+        them with one call. Must have a trained nn lemmatizer already.
+    '''
+    def __init__(self,
+                 weights_loc,
+                 char_set_loc,
+                 pos_set_loc,
+                 max_size):
+        self.max_size = max_size
+        self.weights = np.load(weights_loc)
+        with open(char_set_loc) as fp:
+            self.char_set = cPickle.load(fp)
+        with open(pos_set_loc) as fp:
+            self.pos_set = cPickle.load(fp)
+
+    def lemmatize(self, word, pos='NN'):
+        pos_to_ix = { po:i for i,po in enumerate(pos_set) }
+        char_to_ix = { ch:i for i,ch in enumerate(char_set) }
+        ix_to_char = { i:ch for i,ch in enumerate(char_set) }
+        word_to_ixs = lambda w: [char_to_ix[l] for l in w]
+
+        word_input = pad_array(word_to_ixs(word), self.max_size)
+        pos_input = pos_to_ix[pos]
+
+        word_input = np.concatenate((word_input, pos_input))
+        lemma_output = nn.neural_net_predict(self.weights, word_input)
+
+        return ''.join([ix_to_char[i] for i in lemma_output if i > 0])

@@ -19,19 +19,21 @@ https://arxiv.org/pdf/cmp-lg/9503019.pdf
 from __future__ import absolute_import, division
 from __future__ import print_function
 
+import sys
 import numpy as np
 import nltk
 import cPickle
-import nn
 
 from constants import *
 import create_toy_data as ctd
 from metrics import get_auc
 from collections import defaultdict
 
-import sys
 sys.path.append('../common')
 from util import split_data
+
+sys.path.append('../models')
+import nn
 
 
 def get_loc_in_array(value, array):
