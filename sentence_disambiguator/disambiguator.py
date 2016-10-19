@@ -29,6 +29,10 @@ import create_toy_data as ctd
 from metrics import get_auc
 from collections import defaultdict
 
+import sys
+sys.path.append('../common')
+from util import split_data
+
 
 def get_loc_in_array(value, array):
     find = np.where(array == value)[0]
@@ -491,7 +495,7 @@ def create_features_labels(save_to_disk=False):
     darrays, labels = make_grams(
         darrays, labels, 3, target_tag=EOS_PUNC)
 
-    (tr_inputs, te_inputs), (tr_outputs, te_outputs) = ctd.split_data(
+    (tr_inputs, te_inputs), (tr_outputs, te_outputs) = split_data(
         darrays, out_data=labels, frac=0.80)
 
     if save_to_disk:
