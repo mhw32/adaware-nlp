@@ -72,7 +72,7 @@ def accuracy(params, inputs, targets):
 
 
 def train_nn(
-        inputs, outputs, num_hiddens,
+        inputs, outputs, num_hiddens,  # don't include inputs and outputs
         batch_size=256, param_scale=0.1,
         num_epochs=5, step_size=0.001, L2_reg=1.0):
 
