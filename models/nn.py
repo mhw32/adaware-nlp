@@ -3,7 +3,10 @@ from __future__ import print_function
 from builtins import range
 
 from copy import copy
-import create_toy_data as ctd
+import sys
+
+sys.path.append('../common')
+import util
 
 # load in libraries for NN
 import autograd.numpy as np
@@ -74,7 +77,7 @@ def train_nn(
         num_epochs=5, step_size=0.001, L2_reg=1.0):
 
     # split data (again) into a training and a validation set
-    (tr_inputs, va_inputs), (tr_outputs, va_outputs) = ctd.split_data(
+    (tr_inputs, va_inputs), (tr_outputs, va_outputs) = util.split_data(
         inputs, out_data=outputs, frac=0.80)
 
     num_input_dims = tr_inputs.shape[1]

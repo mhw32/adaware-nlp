@@ -18,9 +18,10 @@ sys.path.append('../common')
 from util import batch_index_generator, split_data
 
 sys.path.append('../models')
-import gru
+import nn
 
 # to generate a training dataset
+import numpy as np
 from nltk import pos_tag, word_tokenize
 from nltk.corpus import wordnet
 from nltk.stem import WordNetLemmatizer
@@ -39,7 +40,10 @@ def treebank_to_simple(penn_tag, default=None):
 
 def pad_array(array, max_size):
     a = np.zeros(max_size)
-    a[:len(array)] = array
+    if len(array) > max_size:
+        a = array[:max_size]
+    else:
+        a[:len(array)] = array
     return a
 
 
@@ -50,14 +54,16 @@ def gen_dataset(sentences, train_test_split=True, max_size=25):
 
         Args
         ----
-        sentences : list of sentences where each sentence is a string
+        sentences : list of sentences where each sentence is list of tokens
     '''
 
     lemmatizer = WordNetLemmatizer()
     X, P, y = [], [], []
+    num_sentences = len(sentences)
 
-    for sentence in sentences:
-        words = word_tokenize(sentence)
+    for sent_i, words in enumerate(sentences):
+        if sent_i % 1000 == 0:
+            print("{} sentences parsed. {} remaining.".format(sent_i, num_sentences - sent_i - 1))
         raw_pos = [p[1]for p in pos_tag(words)]
         pos = [str(treebank_to_simple(p, default=wordnet.NOUN)) for p in raw_pos]
         lemmas = [str(lemmatizer.lemmatize(w, pos=p)) for (w,p) in zip(words, pos)]
@@ -93,11 +99,11 @@ def train_lemmatizer(
     obs_set,
     out_set,
     num_hiddens,
-    batch_size=64,
+    batch_size=256,
     param_scale=0.01,
-    num_epochs=100,
+    num_epochs=1000,
     step_size=0.001,
-    L2_reg=0
+    L2_reg=0.1
 ):
     ''' function to train the Bi-LSTM for mapping vectorized
         characters + POS --> a vectorized lemma
