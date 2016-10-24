@@ -48,7 +48,11 @@ def pad_array(array, max_size):
     return a
 
 
-def prepare_sentence(sentence, pos_dict, max_words=78, return_output=True):
+def prepare_sentence(words,
+                     pos_dict,
+                     vectorize,
+                     max_words=78,
+                     return_output=True):
     X = np.zeros((max_words, 301))
     if return_output:
         y = np.zeros((max_words, 300))
@@ -95,12 +99,11 @@ def gen_dataset(sentences, train_test_split=True, max_words=78):
             pos_dict[pos] = i
 
     vectorize = lambda x: model[x] if x in model else np.zeros(300)
-
     X = np.zeros((num_sentences, max_words, 301))
     y = np.zeros((num_sentences, max_words, 300))
 
     param_dict = {}
-    param_dict['max_size'] = max_size
+    param_dict['max_words'] = max_words
     param_dict['pos_dict'] = pos_dict
 
     for sent_i, words in enumerate(sentences):
@@ -109,7 +112,7 @@ def gen_dataset(sentences, train_test_split=True, max_words=78):
                 sent_i, num_sentences - sent_i - 1))
 
         X[sent_i, :, :], y[sent_i, :, :] = prepare_sentence(
-            words, pos_dict, max_size=max_size)
+            words, pos_dict, vectorize, max_words=max_words)
 
     if train_test_split:
         (X_train, X_test), (y_train, y_test) = split_data(
@@ -170,15 +173,13 @@ class NeuralLemmatizer(object):
     '''
     def __init__(self,
                  weights_loc,
-                 pos_set_loc,
                  param_set_loc):
         with open(weights_loc) as fp:
             self.weights = cPickle.load(fp)
-        with open(pos_set_loc) as fp:
-            self.pos_set = cPickle.load(fp)
+
         with open(param_set_loc) as fp:
             self.param_set = cPickle.load(fp)
-            self.max_size = self.param_set['max_size']
+            self.max_words = self.param_set['max_words']
             self.pos_dict = self.param_set['pos_dict']
 
     def lemmatize(self, sentence):
