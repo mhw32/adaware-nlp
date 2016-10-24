@@ -1,12 +1,27 @@
 from __future__ import absolute_import
 from __future__ import print_function
+
+import sys
 from builtins import range
 from os.path import dirname, join
+
+sys.path.append('../common')
+import util
+
 import autograd.numpy as np
 import autograd.numpy.random as npr
 from autograd import grad
 from autograd.scipy.misc import logsumexp
 from optimizers import adam
+
+
+def sigmoid(x):
+    return 0.5*(np.tanh(x) + 1.0)   # Output ranges from 0 to 1.
+
+
+def concat_and_multiply(weights, *args):
+    cat_state = np.hstack(args + (np.ones((args[0].shape[0], 1)),))
+    return np.dot(cat_state, weights)
 
 
 def init_lstm_params(input_size, state_size, output_size,
@@ -82,7 +97,7 @@ def train_lstm(inputs,
                                    state_size,
                                    output_size,
                                    param_scale=param_scale,
-                                   rs=npr.RandomState(0)):
+                                   rs=npr.RandomState(0))
 
     num_batches = int(np.ceil(tr_inputs.shape[0] / batch_size))
 

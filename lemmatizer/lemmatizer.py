@@ -18,10 +18,11 @@ sys.path.append('../common')
 from util import batch_index_generator, split_data
 
 sys.path.append('../models')
-import nn
+import lstm
 
 # to generate a training dataset
 import numpy as np
+from gensim import models
 from nltk import pos_tag, word_tokenize
 from nltk.corpus import wordnet
 from nltk.stem import WordNetLemmatizer
@@ -47,7 +48,30 @@ def pad_array(array, max_size):
     return a
 
 
-def gen_dataset(sentences, train_test_split=True, max_size=25):
+def prepare_sentence(sentence, pos_dict, max_words=78, return_output=True):
+    X = np.zeros((max_words, 301))
+    if return_output:
+        y = np.zeros((max_words, 300))
+
+    raw_pos = [p[1]for p in pos_tag(words)]
+    pos     = [str(treebank_to_simple(p, default=wordnet.NOUN)) for p in raw_pos]
+    if return_output:
+        lemmas  = [str(lemmatizer.lemmatize(w, pos=p)) for (w,p) in zip(words, pos)]
+
+    num_words = len(words) if len(words) <= max_words else max_words
+
+    for word_i in range(num_words):
+        X[word_i, :300] = vectorize(words[word_i])
+        X[word_i, -1] = pos_dict[raw_pos[word_i]]
+        if return_output:
+            y[word_i, :] = vectorize(lemmas[word_i])
+
+    if return_output:
+        return X, y
+    return X
+
+
+def gen_dataset(sentences, train_test_split=True, max_words=78):
     ''' Generate a dataset of (input, output) pairs where the
         input is a vector of characters + POS and output is
         a vector of characters for the lemmatized form.
@@ -55,44 +79,44 @@ def gen_dataset(sentences, train_test_split=True, max_size=25):
         Args
         ----
         sentences : list of sentences where each sentence is list of tokens
+        max_words : maximum number of words allowed in sentence
     '''
 
     lemmatizer = WordNetLemmatizer()
-    X, P, y = [], [], []
     num_sentences = len(sentences)
+
+    # replace me with GloVe when complete
+    model = models.Word2Vec.load_word2vec_format(
+        '../storage/GoogleNews-vectors-negative300.bin', binary=True)
+    with open('../storage/one_hot_list') as f:
+        pos_list = cPickle.load(f)
+        pos_dict = {}
+        for i, pos in enumerate(pos_list):
+            pos_dict[pos] = i
+
+    vectorize = lambda x: model[x] if x in model else np.zeros(300)
+
+    X = np.zeros((num_sentences, max_words, 301))
+    y = np.zeros((num_sentences, max_words, 300))
+
+    param_dict = {}
+    param_dict['max_size'] = max_size
+    param_dict['pos_dict'] = pos_dict
 
     for sent_i, words in enumerate(sentences):
         if sent_i % 1000 == 0:
-            print("{} sentences parsed. {} remaining.".format(sent_i, num_sentences - sent_i - 1))
-        raw_pos = [p[1]for p in pos_tag(words)]
-        pos = [str(treebank_to_simple(p, default=wordnet.NOUN)) for p in raw_pos]
-        lemmas = [str(lemmatizer.lemmatize(w, pos=p)) for (w,p) in zip(words, pos)]
+            print("{} sentences parsed. {} remaining.".format(
+                sent_i, num_sentences - sent_i - 1))
 
-        X.extend(words)
-        P.extend(raw_pos)
-        y.extend(lemmas)
-
-    pos_set = np.unique(P)
-    char_set = list(set(' '.join(X)))
-    pos_to_ix = { po:i for i,po in enumerate(pos_set) }
-    char_to_ix = { ch:i for i,ch in enumerate(char_set) }
-    word_to_ixs = lambda w: [char_to_ix[l] for l in w]
-
-    word_char_arr = np.zeros((len(X), max_size + 1))
-    lemma_char_arr = np.zeros((len(y), max_size))
-
-    for i, (word, pos, lemma) in enumerate(zip(X, P, y)):
-        word_char_arr[i, :max_size] = pad_array(word_to_ixs(word), max_size)
-        word_char_arr[i, max_size] = pos_to_ix[pos]
-        lemma_char_arr[i, :] = pad_array(word_to_ixs(lemma), max_size)
+        X[sent_i, :, :], y[sent_i, :, :] = prepare_sentence(
+            words, pos_dict, max_size=max_size)
 
     if train_test_split:
         (X_train, X_test), (y_train, y_test) = split_data(
-            word_char_arr, out_data=lemma_char_arr, frac=0.80)
+            X, out_data=y, frac=0.80)
 
-        return (X_train, X_test), (y_train, y_test), char_set, pos_set, max_size
-
-    return (word_char_arr, lemma_char_arr), char_set, pos_set, max_size
+        return (X_train, X_test), (y_train, y_test), param_dict
+    return (X, y), param_dict
 
 
 def train_lemmatizer(
@@ -102,10 +126,9 @@ def train_lemmatizer(
     batch_size=256,
     param_scale=0.01,
     num_epochs=1000,
-    step_size=0.001,
-    L2_reg=0.1
+    step_size=0.001
 ):
-    ''' function to train the Bi-LSTM for mapping vectorized
+    ''' function to train the NN for mapping vectorized
         characters + POS --> a vectorized lemma
 
         Args
@@ -118,9 +141,8 @@ def train_lemmatizer(
                  created by gen_dataset
         y_test : np.array
                  created by gen_dataset
-        num_hiddens : list of integers
-                      number of hidden nodes
-                      i.e. [30, 50, 1]
+        num_hiddens : integer
+                      LSTM hidden nodes
         batch_size : integer
                      size of batch in learning
         param_scale : float
@@ -129,18 +151,15 @@ def train_lemmatizer(
                      number of epochs to train
         step_size : float
                     initial step size
-        L2_reg : float
-                 regularization constant
     '''
 
-    trained_weights = nn.train_nn(obs_set,
-                                  out_set,
-                                  num_hiddens,
-                                  batch_size=batch_size,
-                                  param_scale=param_scale,
-                                  num_epochs=num_epochs,
-                                  step_size=step_size,
-                                  L2_reg=L2_reg)
+    trained_weights = lstm.train_lstm(obs_set,
+                                      out_set,
+                                      100,
+                                      batch_size=batch_size,
+                                      param_scale=param_scale,
+                                      num_epochs=num_epochs,
+                                      step_size=step_size)
 
     return trained_weights
 
@@ -151,26 +170,24 @@ class NeuralLemmatizer(object):
     '''
     def __init__(self,
                  weights_loc,
-                 char_set_loc,
                  pos_set_loc,
-                 max_size):
-        self.max_size = max_size
-        self.weights = np.load(weights_loc)
-        with open(char_set_loc) as fp:
-            self.char_set = cPickle.load(fp)
+                 param_set_loc):
+        with open(weights_loc) as fp:
+            self.weights = cPickle.load(fp)
         with open(pos_set_loc) as fp:
             self.pos_set = cPickle.load(fp)
+        with open(param_set_loc) as fp:
+            self.param_set = cPickle.load(fp)
+            self.max_size = self.param_set['max_size']
+            self.pos_dict = self.param_set['pos_dict']
 
-    def lemmatize(self, word, pos='NN'):
-        pos_to_ix = { po:i for i,po in enumerate(pos_set) }
-        char_to_ix = { ch:i for i,ch in enumerate(char_set) }
-        ix_to_char = { i:ch for i,ch in enumerate(char_set) }
-        word_to_ixs = lambda w: [char_to_ix[l] for l in w]
+    def lemmatize(self, sentence):
+        X = prepare_sentence(sentence,
+                             pos_dict,
+                             max_words=78,
+                             return_output=True)
 
-        word_input = pad_array(word_to_ixs(word), self.max_size)
-        pos_input = pos_to_ix[pos]
-
-        word_input = np.concatenate((word_input, pos_input))
-        lemma_output = nn.neural_net_predict(self.weights, word_input)
-
-        return ''.join([ix_to_char[i] for i in lemma_output if i > 0])
+        y = lstm.lstm_predict(self.weights, X)
+        # convert y back to a bunch of words
+        y_words = model.most_similar(positive=y, topn=1)
+        return y_words

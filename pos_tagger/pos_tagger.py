@@ -83,7 +83,7 @@ def train_pos_tagger_blstm(
 def text_to_vector(sentence_list, MAX_SENTENCE=78, model=None):
     if model is None:
         model = models.Word2Vec.load_word2vec_format(
-            'storage/GoogleNews-vectors-negative300.bin', binary=True)
+            '../storage/GoogleNews-vectors-negative300.bin', binary=True)
     X = np.zeros((MAX_SENTENCE, len(sentence_list), 300))
     capitals = np.zeros((MAX_SENTENCE, len(sentence_list), 3))
     vectorize = lambda x: model[x] if x in model else np.zeros(300)
@@ -101,7 +101,7 @@ def text_to_vector(sentence_list, MAX_SENTENCE=78, model=None):
 
 
 def cap_vector(word):
-    ''' Returns vector (x,y,z), where x = 1 if word is all lowercase,
+    ''' Returns vector (x,y,z), wh ere x = 1 if word is all lowercase,
         y = 1 if all uppercase, z = 1 if leads with capital.
     '''
     x = int(word.lower() == word)
@@ -112,7 +112,7 @@ def cap_vector(word):
 
 def probability_to_pos(logprobs, mask):
     logprobs = np.array(logprobs)
-    with open('storage/one_hot_list', 'rb') as f:
+    with open('../storage/one_hot_list', 'rb') as f:
         one_hot = pickle.load(f)
     sentences = []
     for i in range(logprobs.shape[1]):
