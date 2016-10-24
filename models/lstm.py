@@ -56,10 +56,12 @@ def lstm_predict(params, inputs):
     hiddens = np.repeat(params['init hiddens'], num_sequences, axis=0)
     cells   = np.repeat(params['init cells'],   num_sequences, axis=0)
 
-    output = [hiddens_to_output_probs(hiddens)]
-    for input in inputs:  # Iterate over time steps.
+    output = np.zeros((hiddens.shape[0],
+                       inputs.shape[1],
+                       init_params['predict'].shape[1]))
+    for input_i, input in enumerate(inputs):  # Iterate over time steps.
         hiddens, cells = update_lstm(input, hiddens, cells)
-        output.append(hiddens_to_output_probs(hiddens))
+        output[input_i, :, :] = hiddens_to_output_probs(hiddens)
     return output
 
 
@@ -74,7 +76,7 @@ def lstm_log_likelihood(params, inputs, targets):
 
 def accuracy(params, inputs, targets):
     target_class = np.argmax(targets, axis=1)
-    predicted_class = np.argmax(neural_net_predict(params, inputs), axis=1)
+    predicted_class = np.argmax(lstm_predict(params, inputs), axis=1)
     return np.mean(predicted_class == target_class)
 
 
@@ -82,7 +84,7 @@ def train_lstm(inputs,
                outputs,
                state_size,
                batch_size=256,
-               param_scale=0.01,
+               param_scale=0.001,
                num_epochs=5,
                step_size=0.001):
 
@@ -90,8 +92,13 @@ def train_lstm(inputs,
     (tr_inputs, va_inputs), (tr_outputs, va_outputs) = util.split_data(
         inputs, out_data=outputs, frac=0.80)
 
-    input_size = tr_inputs.shape[1]
-    output_size = tr_outputs.shape[1]
+    input_size = tr_inputs.shape[2]
+    output_size = tr_outputs.shape[2]
+
+    tr_inputs = np.swapaxes(tr_inputs, 0, 1)
+    va_inputs = np.swapaxes(va_inputs, 0, 1)
+    tr_outputs = np.swapaxes(tr_outputs, 0, 1)
+    va_outputs = np.swapaxes(va_outputs, 0, 1)
 
     init_params = init_lstm_params(input_size,
                                    state_size,
@@ -99,7 +106,7 @@ def train_lstm(inputs,
                                    param_scale=param_scale,
                                    rs=npr.RandomState(0))
 
-    num_batches = int(np.ceil(tr_inputs.shape[0] / batch_size))
+    num_batches = int(np.ceil(tr_inputs.shape[1] / batch_size))
 
     def batch_indices(iter):
         idx = iter % num_batches
@@ -109,7 +116,7 @@ def train_lstm(inputs,
     def objective(params, iter):
         idx = batch_indices(iter)
         return -lstm_log_likelihood(
-            params, tr_inputs[idx], tr_outputs[idx])
+            params, tr_inputs[:, idx, :], tr_outputs[:, idx, :])
 
     # Get gradient of objective using autograd.
     objective_grad = grad(objective)

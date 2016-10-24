@@ -50,7 +50,8 @@ def pad_array(array, max_size):
 
 def prepare_sentence(words,
                      pos_dict,
-                     vectorize,
+                     vectorizer,
+                     lemmatizer,
                      max_words=78,
                      return_output=True):
     X = np.zeros((max_words, 301))
@@ -60,15 +61,15 @@ def prepare_sentence(words,
     raw_pos = [p[1]for p in pos_tag(words)]
     pos     = [str(treebank_to_simple(p, default=wordnet.NOUN)) for p in raw_pos]
     if return_output:
-        lemmas  = [str(lemmatizer.lemmatize(w, pos=p)) for (w,p) in zip(words, pos)]
+        lemmas  = [str(lemmatizer(w, pos=p)) for (w,p) in zip(words, pos)]
 
     num_words = len(words) if len(words) <= max_words else max_words
 
     for word_i in range(num_words):
-        X[word_i, :300] = vectorize(words[word_i])
+        X[word_i, :300] = vectorizer(words[word_i])
         X[word_i, -1] = pos_dict[raw_pos[word_i]]
         if return_output:
-            y[word_i, :] = vectorize(lemmas[word_i])
+            y[word_i, :] = vectorizer(lemmas[word_i])
 
     if return_output:
         return X, y
@@ -86,7 +87,6 @@ def gen_dataset(sentences, train_test_split=True, max_words=78):
         max_words : maximum number of words allowed in sentence
     '''
 
-    lemmatizer = WordNetLemmatizer()
     num_sentences = len(sentences)
 
     # replace me with GloVe when complete
@@ -98,7 +98,8 @@ def gen_dataset(sentences, train_test_split=True, max_words=78):
         for i, pos in enumerate(pos_list):
             pos_dict[pos] = i
 
-    vectorize = lambda x: model[x] if x in model else np.zeros(300)
+    lemmatizer = WordNetLemmatizer().lemmatize
+    vectorizer = lambda x: model[x] if x in model else np.zeros(300)
     X = np.zeros((num_sentences, max_words, 301))
     y = np.zeros((num_sentences, max_words, 300))
 
@@ -112,7 +113,7 @@ def gen_dataset(sentences, train_test_split=True, max_words=78):
                 sent_i, num_sentences - sent_i - 1))
 
         X[sent_i, :, :], y[sent_i, :, :] = prepare_sentence(
-            words, pos_dict, vectorize, max_words=max_words)
+            words, pos_dict, vectorizer, lemmatizer, max_words=max_words)
 
     if train_test_split:
         (X_train, X_test), (y_train, y_test) = split_data(
