@@ -56,12 +56,13 @@ def lstm_predict(params, inputs):
     hiddens = np.repeat(params['init hiddens'], num_sequences, axis=0)
     cells   = np.repeat(params['init cells'],   num_sequences, axis=0)
 
-    output = np.zeros((hiddens.shape[0],
-                       inputs.shape[1],
-                       params['predict'].shape[1]))
     for input_i, input in enumerate(inputs):  # Iterate over time steps.
         hiddens, cells = update_lstm(input, hiddens, cells)
-        output[input_i, :, :] = hiddens_to_output_probs(hiddens)
+        _output = np.expand_dims(hiddens_to_output_probs(hiddens), 0)
+        if input_i == 0:
+            output = _output
+        else:
+            output = np.concatenate((output, _output))
     return output
 
 
@@ -83,7 +84,7 @@ def accuracy(params, inputs, targets):
 def train_lstm(inputs,
                outputs,
                state_size,
-               batch_size=256,
+               batch_size=16,
                param_scale=0.001,
                num_epochs=5,
                step_size=0.001):
@@ -94,11 +95,6 @@ def train_lstm(inputs,
 
     input_size = tr_inputs.shape[2]
     output_size = tr_outputs.shape[2]
-
-    tr_inputs = np.swapaxes(tr_inputs, 0, 1)
-    va_inputs = np.swapaxes(va_inputs, 0, 1)
-    tr_outputs = np.swapaxes(tr_outputs, 0, 1)
-    va_outputs = np.swapaxes(va_outputs, 0, 1)
 
     init_params = init_lstm_params(input_size,
                                    state_size,
@@ -133,8 +129,7 @@ def train_lstm(inputs,
             print("{:15}|{:20}|{:20}|{:20}|{:20}".format(
                 iter//num_batches, train_acc, train_ll, valid_acc, valid_ll))
 
-    # The optimizers provided can optimize lists, tuples, or dicts of
-    # parameters.
+    # The optimizers provided can optimize lists, tuples, or dicts of parameters.
     optimized_params = adam(objective_grad,
                             init_params,
                             step_size=step_size,
@@ -142,4 +137,3 @@ def train_lstm(inputs,
                             callback=print_perf)
 
     return optimized_params
-
