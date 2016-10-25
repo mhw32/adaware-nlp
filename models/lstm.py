@@ -58,7 +58,7 @@ def lstm_predict(params, inputs):
 
     output = np.zeros((hiddens.shape[0],
                        inputs.shape[1],
-                       init_params['predict'].shape[1]))
+                       params['predict'].shape[1]))
     for input_i, input in enumerate(inputs):  # Iterate over time steps.
         hiddens, cells = update_lstm(input, hiddens, cells)
         output[input_i, :, :] = hiddens_to_output_probs(hiddens)
