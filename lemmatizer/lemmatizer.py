@@ -127,9 +127,9 @@ def train_lemmatizer(
     obs_set,
     out_set,
     num_hiddens,
-    batch_size=256,
-    param_scale=0.01,
-    num_epochs=1000,
+    batch_size=16,
+    param_scale=0.001,
+    num_epochs=100,
     step_size=0.001
 ):
     ''' function to train the NN for mapping vectorized
@@ -156,6 +156,9 @@ def train_lemmatizer(
         step_size : float
                     initial step size
     '''
+
+    obs_set = np.swapaxes(obs_set, 0, 1)
+    out_set = np.swapaxes(out_set, 0, 1)
 
     trained_weights = lstm.train_lstm(obs_set,
                                       out_set,

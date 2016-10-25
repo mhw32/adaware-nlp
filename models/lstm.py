@@ -84,7 +84,7 @@ def accuracy(params, inputs, targets):
 def train_lstm(inputs,
                outputs,
                state_size,
-               batch_size=16,
+               batch_size=256,
                param_scale=0.001,
                num_epochs=5,
                step_size=0.001):
@@ -121,13 +121,12 @@ def train_lstm(inputs,
         "     Epoch     |    Train accuracy  |    Train log-like  |  Holdout accuracy  |  Holdout log-like  ")
 
     def print_perf(params, iter, gradient):
-        if iter % num_batches == 0:
-            train_acc = accuracy(params, tr_inputs, tr_outputs)
-            train_ll = lstm_log_likelihood(params, tr_inputs, tr_outputs)
-            valid_acc = accuracy(params, va_inputs, va_outputs)
-            valid_ll = lstm_log_likelihood(params, va_inputs, va_outputs)
-            print("{:15}|{:20}|{:20}|{:20}|{:20}".format(
-                iter//num_batches, train_acc, train_ll, valid_acc, valid_ll))
+        train_acc = accuracy(params, tr_inputs, tr_outputs)
+        train_ll = -lstm_log_likelihood(params, tr_inputs, tr_outputs)
+        valid_acc = accuracy(params, va_inputs, va_outputs)
+        valid_ll = -lstm_log_likelihood(params, va_inputs, va_outputs)
+        print("{:15}|{:20}|{:20}|{:20}|{:20}".format(
+            iter//num_batches, train_acc, train_ll, valid_acc, valid_ll))
 
     # The optimizers provided can optimize lists, tuples, or dicts of parameters.
     optimized_params = adam(objective_grad,
