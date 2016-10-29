@@ -56,14 +56,12 @@ def lstm_predict(params, inputs):
     hiddens = np.repeat(params['init hiddens'], num_sequences, axis=0)
     cells   = np.repeat(params['init cells'],   num_sequences, axis=0)
 
+    output = []
     for input_i, input in enumerate(inputs):  # Iterate over time steps.
         hiddens, cells = update_lstm(input, hiddens, cells)
-        _output = np.expand_dims(hiddens_to_output_probs(hiddens), 0)
-        if input_i == 0:
-            output = _output
-        else:
-            output = np.concatenate((output, _output))
-    return output
+        _output = hiddens_to_output_probs(hiddens)
+        output.append(_output)
+    return np.array(output)
 
 
 def lstm_log_likelihood(params, inputs, targets):
