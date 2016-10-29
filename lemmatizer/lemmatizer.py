@@ -18,7 +18,7 @@ sys.path.append('../common')
 from util import batch_index_generator, split_data
 
 sys.path.append('../models')
-import lstm
+import nn_regressor
 
 # to generate a training dataset
 import numpy as np
@@ -123,10 +123,40 @@ def gen_dataset(sentences, train_test_split=True, max_words=78):
     return (X, y), param_dict
 
 
+def window_featurizer(X, y, size=[1,1]):
+    ''' Given some time series of data, it might be a good idea
+        to include some temporal information by adding neighboring
+        vectors.
+
+        Args
+        ----
+        X : 2D numpy
+            inputs matrix
+        y : 2D numpy
+            outputs matrix
+        size : list of 2
+               first is number prior, second is number after
+    '''
+
+    if sum(size) <= 0:
+        return X, y
+
+    window_X = np.zeros((X.shape[0] - sum(size), X.shape[1]*(sum(size)+1)))
+    window_y = np.zeros((y.shape[0] - sum(size), y.shape[1]))
+
+    for i in range(size[0],X.shape[0]-size[1]-1):
+        for j,k in enumerate(range(i-size[0],i+size[1]+1)):
+            window_X[i-size[0], j*X.shape[1]:(j+1)*X.shape[1]] = X[k, :]
+        window_y[i-size[0], :] = y[i, :]
+
+    return window_X, window_y
+
+
 def train_lemmatizer(
     obs_set,
     out_set,
     num_hiddens,
+    window_size=[0,0],
     batch_size=16,
     param_scale=0.001,
     num_epochs=100,
@@ -147,6 +177,8 @@ def train_lemmatizer(
                  created by gen_dataset
         num_hiddens : integer
                       LSTM hidden nodes
+        window_size : integer
+                      group nearby vecvtors
         batch_size : integer
                      size of batch in learning
         param_scale : float
@@ -157,16 +189,19 @@ def train_lemmatizer(
                     initial step size
     '''
 
-    obs_set = np.swapaxes(obs_set, 0, 1)
-    out_set = np.swapaxes(out_set, 0, 1)
+    obs_set = obs_set.reshape(-1, obs_set.shape[-1])
+    out_set = out_set.reshape(-1, out_set.shape[-1])
 
-    trained_weights = lstm.train_lstm(obs_set,
-                                      out_set,
-                                      100,
-                                      batch_size=batch_size,
-                                      param_scale=param_scale,
-                                      num_epochs=num_epochs,
-                                      step_size=step_size)
+    obs_set, out_set = window_featurizer(obs_set, out_set, size=window_size)
+
+    trained_weights = \
+        nn_regressor.train_nn_regressor(obs_set,
+                                        out_set,
+                                        [1000],
+                                        batch_size=batch_size,
+                                        param_scale=param_scale,
+                                        num_epochs=num_epochs,
+                                        step_size=step_size)
 
     return trained_weights
 

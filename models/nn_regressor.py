@@ -76,7 +76,7 @@ def train_nn_regressor(inputs,
     # define nn arch
     num_input_dims = tr_inputs.shape[1]
     num_output_dims = tr_outputs.shape[1]
-    layer_sizes = [num_input_dims] + num_hiddens + [num_output_dims]
+    layer_sizes = [num_input_dims] + layer_sizes + [num_output_dims]
 
     num_weights, predictions, logprob = \
         make_nn_funs(layer_sizes=layer_sizes, nonlinearity=rbf)
