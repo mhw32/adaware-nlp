@@ -223,7 +223,7 @@ def train_lemmatizer(
     param_set['loglike_fun'] = loglike_fun
     param_set['trained_weights'] = trained_weights
 
-    return trained_weights, param_set
+    return param_set
 
 
 class NeuralLemmatizer(object):
