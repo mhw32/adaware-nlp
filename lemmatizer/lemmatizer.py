@@ -11,7 +11,9 @@
 from __future__ import absolute_import
 from __future__ import print_function
 
+import os
 import sys
+import dill
 import cPickle
 
 sys.path.append('../common')
@@ -66,7 +68,6 @@ def prepare_sentence(words,
     num_words = len(words) if len(words) <= max_words else max_words
 
     for word_i in range(num_words):
-        print(vectorizer(words[word_i]))
         X[word_i, :300] = vectorizer(words[word_i])
         X[word_i, -1] = pos_dict[raw_pos[word_i]]
         if return_output:
@@ -235,11 +236,10 @@ class NeuralLemmatizer(object):
                  nn_param_set_loc):
 
         with open(nn_param_set_loc) as fp:
-            nn_param_set = cPickle.load(fp)
+            nn_param_set = dill.load(fp)
             self.pred_fun = nn_param_set['pred_fun']
             self.loglike_fun = nn_param_set['loglike_fun']
             self.window_size = nn_param_set['window_size']
-            self.max_words = nn_param_set['max_words']
             self.weights = nn_param_set['trained_weights']
 
         with open(gen_param_set_loc) as fp:
@@ -250,6 +250,7 @@ class NeuralLemmatizer(object):
 
         model = models.Word2Vec.load_word2vec_format(
             vectorizer_loc, binary=True)
+        self.model = model
         self.vectorizer = lambda x: model[x] if x in model else np.zeros(300)
 
     def lemmatize(self, sentence):
@@ -263,5 +264,7 @@ class NeuralLemmatizer(object):
         y = self.pred_fun(self.weights, X)
 
         # convert y back to a bunch of words
-        y_words = model.most_similar(positive=y, topn=1)
-        return y_words
+        y_words = []
+        for y_vec in y:
+            y_word = self.model.similar_by_vector(y_vec, topn=1, restrict_vocab=10000)
+        y_words.append(y_word)

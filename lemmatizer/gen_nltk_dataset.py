@@ -1,8 +1,9 @@
 import os
+import dill
 import cPickle
 import numpy as np
 from nltk.corpus import brown
-from lemmatizer import gen_dataset, train_lemmatizer
+from lemmatizer import gen_dataset, train_lemmatizer, NeuralLemmatizer
 
 def gen_brown_dataset(output_folder, num=None):
     sentences = brown.sents()
@@ -39,4 +40,12 @@ def train_brown_lemmatizer(output_folder):
 
     if output_folder:
         with open(os.path.join(output_folder, 'nn_param_dict.pkl'), 'w') as f:
-            cPickle.dump(nn_param_dict, f)
+            dill.dump(nn_param_set, f)
+
+
+def test_brown_lemmatizer(sentence):
+    lemmatizer = NeuralLemmatizer(
+        '_example/100/gen_param_dict.pkl',
+        '_example/100/nn_param_dict.pkl')
+
+    return lemmatizer.lemmatize(sentence)
