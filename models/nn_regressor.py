@@ -94,20 +94,19 @@ def train_nn_regressor(inputs,
     objective_grad = grad(objective)
 
     print(
-        "     Epoch     |    Train accuracy  |    Train log-like  |  Holdout accuracy  |  Holdout log-like  ")
+        "     Epoch     |    Train error  |    Train log-like  |  Holdout error  |  Holdout log-like  ")
 
     def print_perf(weights, iter, gradient):
-        if iter % num_batches == 0:
-            # make predictions
-            tr_preds = predictions(weights, tr_inputs)
-            va_preds = predictions(weights, va_inputs)
-            # get accuracy measurements
-            train_acc = rms(tr_preds, tr_outputs)
-            valid_acc = rms(va_preds, va_outputs)
-            # get log likelihoods
-            train_ll = -logprob(weights, tr_inputs, tr_outputs)
-            valid_ll = -logprob(weights, va_inputs, va_outputs)
-            print("{:15}|{:20}|{:20}|{:20}|{:20}".format(
+        # make predictions
+        tr_preds = predictions(weights, tr_inputs)
+        va_preds = predictions(weights, va_inputs)
+        # get accuracy measurements
+        train_acc = rms(tr_preds, tr_outputs)
+        valid_acc = rms(va_preds, va_outputs)
+        # get log likelihoods
+        train_ll = -logprob(weights, tr_inputs, tr_outputs)
+        valid_ll = -logprob(weights, va_inputs, va_outputs)
+        print("{:15}|{:20}|{:20}|{:20}|{:20}".format(
                 iter//num_batches, train_acc, train_ll, valid_acc, valid_ll))
 
     # define init weights
@@ -118,7 +117,7 @@ def train_nn_regressor(inputs,
     trained_weights = adam(objective_grad,
                            init_weights,
                            step_size=step_size,
-                           num_iters=num_epochs * num_batches,
+                           num_iters=num_epochs*num_batches,
                            callback=print_perf)
 
     return predictions, logprob, trained_weights

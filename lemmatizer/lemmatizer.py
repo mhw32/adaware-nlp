@@ -51,7 +51,7 @@ def pad_array(array, max_size):
 def prepare_sentence(words,
                      pos_dict,
                      vectorizer,
-                     lemmatizer,
+                     lemmatizer=None,
                      max_words=78,
                      return_output=True):
     X = np.zeros((max_words, 301))
@@ -66,6 +66,7 @@ def prepare_sentence(words,
     num_words = len(words) if len(words) <= max_words else max_words
 
     for word_i in range(num_words):
+        print(vectorizer(words[word_i]))
         X[word_i, :300] = vectorizer(words[word_i])
         X[word_i, -1] = pos_dict[raw_pos[word_i]]
         if return_output:
@@ -90,8 +91,9 @@ def gen_dataset(sentences, train_test_split=True, max_words=78):
     num_sentences = len(sentences)
 
     # replace me with GloVe when complete
+    model_path = os.path.abspath('../storage/GoogleNews-vectors-negative300.bin')
     model = models.Word2Vec.load_word2vec_format(
-        '../storage/GoogleNews-vectors-negative300.bin', binary=True)
+        model_path, binary=True)
     with open('../storage/one_hot_list') as f:
         pos_list = cPickle.load(f)
         pos_dict = {}
@@ -106,6 +108,7 @@ def gen_dataset(sentences, train_test_split=True, max_words=78):
     param_dict = {}
     param_dict['max_words'] = max_words
     param_dict['pos_dict'] = pos_dict
+    param_dict['vectorizer_loc'] = model_path
 
     for sent_i, words in enumerate(sentences):
         if sent_i % 1000 == 0:
@@ -123,7 +126,7 @@ def gen_dataset(sentences, train_test_split=True, max_words=78):
     return (X, y), param_dict
 
 
-def window_featurizer(X, y, size=[1,1]):
+def window_featurizer(X, y=None, size=[1,1]):
     ''' Given some time series of data, it might be a good idea
         to include some temporal information by adding neighboring
         vectors.
@@ -139,27 +142,32 @@ def window_featurizer(X, y, size=[1,1]):
     '''
 
     if sum(size) <= 0:
-        return X, y
+        return (X, y) if not y is None else X
 
-    window_X = np.zeros((X.shape[0] - sum(size), X.shape[1]*(sum(size)+1)))
-    window_y = np.zeros((y.shape[0] - sum(size), y.shape[1]))
+    window_X = np.zeros((X.shape[0], X.shape[1]*(sum(size)+1)))
+    if not y is None:
+        window_y = np.zeros((y.shape[0], y.shape[1]))
+
+    # prepend + postpend with 0's
+    X = np.vstack((np.zeros((size[0], X.shape[1])), X, np.zeros((size[1], X.shape[1]))))
 
     for i in range(size[0],X.shape[0]-size[1]-1):
         for j,k in enumerate(range(i-size[0],i+size[1]+1)):
             window_X[i-size[0], j*X.shape[1]:(j+1)*X.shape[1]] = X[k, :]
-        window_y[i-size[0], :] = y[i, :]
+        if not y is None:
+            window_y[i-size[0], :] = y[i, :]
 
-    return window_X, window_y
+    return (window_X, window_y) if not y is None else window_X
 
 
 def train_lemmatizer(
     obs_set,
     out_set,
     num_hiddens,
-    window_size=[0,0],
-    batch_size=16,
-    param_scale=0.001,
-    num_epochs=100,
+    window_size=[1,1],
+    batch_size=256,
+    param_scale=0.01,
+    num_epochs=250,
     step_size=0.001
 ):
     ''' function to train the NN for mapping vectorized
@@ -189,21 +197,33 @@ def train_lemmatizer(
                     initial step size
     '''
 
+    param_set = {}
+    param_set['num_hiddens'] = num_hiddens
+    param_set['window_size'] = window_size
+    param_set['batch_size'] = batch_size
+    param_set['param_scale'] = param_scale
+    param_set['num_epochs'] = num_epochs
+    param_set['step_size'] = step_size
+
     obs_set = obs_set.reshape(-1, obs_set.shape[-1])
     out_set = out_set.reshape(-1, out_set.shape[-1])
 
-    obs_set, out_set = window_featurizer(obs_set, out_set, size=window_size)
+    obs_set, out_set = window_featurizer(obs_set, y=out_set, size=window_size)
 
-    trained_weights = \
+    pred_fun, loglike_fun, trained_weights = \
         nn_regressor.train_nn_regressor(obs_set,
                                         out_set,
-                                        [1000],
+                                        [1000, 500],
                                         batch_size=batch_size,
                                         param_scale=param_scale,
                                         num_epochs=num_epochs,
                                         step_size=step_size)
 
-    return trained_weights
+    param_set['pred_fun'] = pred_fun
+    param_set['loglike_fun'] = loglike_fun
+    param_set['trained_weights'] = trained_weights
+
+    return trained_weights, param_set
 
 
 class NeuralLemmatizer(object):
@@ -211,23 +231,37 @@ class NeuralLemmatizer(object):
         them with one call. Must have a trained nn lemmatizer already.
     '''
     def __init__(self,
-                 weights_loc,
-                 param_set_loc):
-        with open(weights_loc) as fp:
-            self.weights = cPickle.load(fp)
+                 gen_param_set_loc,
+                 nn_param_set_loc):
 
-        with open(param_set_loc) as fp:
-            self.param_set = cPickle.load(fp)
-            self.max_words = self.param_set['max_words']
-            self.pos_dict = self.param_set['pos_dict']
+        with open(nn_param_set_loc) as fp:
+            nn_param_set = cPickle.load(fp)
+            self.pred_fun = nn_param_set['pred_fun']
+            self.loglike_fun = nn_param_set['loglike_fun']
+            self.window_size = nn_param_set['window_size']
+            self.max_words = nn_param_set['max_words']
+            self.weights = nn_param_set['trained_weights']
+
+        with open(gen_param_set_loc) as fp:
+            gen_param_set = cPickle.load(fp)
+            vectorizer_loc = gen_param_set['vectorizer_loc']
+            self.max_words = gen_param_set['max_words']
+            self.pos_dict = gen_param_set['pos_dict']
+
+        model = models.Word2Vec.load_word2vec_format(
+            vectorizer_loc, binary=True)
+        self.vectorizer = lambda x: model[x] if x in model else np.zeros(300)
 
     def lemmatize(self, sentence):
         X = prepare_sentence(sentence,
-                             pos_dict,
-                             max_words=78,
-                             return_output=True)
+                             self.pos_dict,
+                             self.vectorizer,
+                             max_words=self.max_words,
+                             return_output=False)
 
-        y = lstm.lstm_predict(self.weights, X)
+        X = window_featurizer(X, size=self.window_size)
+        y = self.pred_fun(self.weights, X)
+
         # convert y back to a bunch of words
         y_words = model.most_similar(positive=y, topn=1)
         return y_words
