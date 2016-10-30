@@ -129,6 +129,7 @@ def gen_dataset(sentences,
     param_dict = {}
     param_dict['normalize'] = normalize
     param_dict['max_char'] = max_char
+    param_dict['max_pos'] = max_pos
     param_dict['max_chars'] = max_chars
     param_dict['max_words'] = max_words
     param_dict['char_dict'] = char_dict
@@ -145,7 +146,7 @@ def gen_dataset(sentences,
 
     if normalize:
         X[:, :, :max_chars] /= max_char
-        X[:, :, -1] /= pos_char
+        X[:, :, -1] /= max_pos
         y /= max_char
 
     if train_test_split:
@@ -291,8 +292,8 @@ class NeuralLemmatizer(object):
                              return_output=False)
 
         if self.normalize:
-            X[:, :, :self.max_char] /= self.max_char
-            X[:, :, -1] /= self.max_pos
+            X[:, :self.max_char] /= self.max_char
+            X[:, -1] /= self.max_pos
 
         X = window_featurizer(X, size=self.window_size)
         y = self.pred_fun(self.weights, X)
