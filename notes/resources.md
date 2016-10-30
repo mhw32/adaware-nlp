@@ -22,7 +22,20 @@ http://web.stanford.edu/class/cs276b/handouts/lecture14.pdf
 - [Cyclic Dependency Network POS Tagging](http://nlp.stanford.edu/~manning/papers/tagging.pdf)  
 
 
-# Stanford NLP
+# Word Embeddings
+- [http://nlp.stanford.edu/projects/glove/](GloVe)
+
+# Coreferences
+- [http://people.seas.harvard.edu/~srush/acl15.pdf](Harvard)
+- [https://github.com/swiseman/nn_coref](Harvard code)
+- [https://people.eecs.berkeley.edu/~gdurrett/papers/durrett-hall-klein-acl2013.pdf](Berkeley)
+- [https://people.eecs.berkeley.edu/~gdurrett/papers/durrett-klein-emnlp2013.pdf](Berkeley)
+- [http://nlp.cs.berkeley.edu/projects/coref.shtml](Berkeley software)
+- [http://nlp.stanford.edu/software/dcoref.shtml](Stanford Software)
+- [http://nlp.stanford.edu/pubs/conllst2011-coref.pdf](Stanford Sieve)
+- [http://www.mitpressjournals.org/doi/pdf/10.1162/COLI_a_00152](Stanford Sieve Thorough)
+# Probability Tools
+- [http://deepdive.stanford.edu/inference](Stanford DeepDive Factor Graphs)
 
 https://cs.stanford.edu/people/jure/pubs/nlpspo-linkkdd04.pdf  
 
