@@ -26,8 +26,8 @@ def gen_brown_dataset(output_folder, num=None):
 
 
 def train_brown_lemmatizer(output_folder):
-    obs_set = np.load('_example/100/X_train.npy')
-    out_set = np.load('_example/100/y_train.npy')
+    obs_set = np.load(os.path.join(output_folder, 'X_train.npy'))
+    out_set = np.load(os.path.join(output_folder, 'y_train.npy'))
     nn_param_set = train_lemmatizer(
         obs_set,
         out_set,

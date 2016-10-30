@@ -59,7 +59,7 @@ def prepare_sentence(words,
                      return_output=True):
     X = np.zeros((max_words, max_chars+1))
     if return_output:
-        y = np.zeros((max_words, 300))
+        y = np.zeros((max_words, max_chars))
 
     raw_pos = [p[1]for p in pos_tag(words)]
     pos     = [str(treebank_to_simple(p, default=wordnet.NOUN)) for p in raw_pos]
@@ -69,10 +69,12 @@ def prepare_sentence(words,
     num_words = len(words) if len(words) <= max_words else max_words
 
     for word_i in range(num_words):
-        X[word_i, :max_chars] = ascii_vectorizer(words[word_i], char_dict)
+        word_ascii = ascii_vectorizer(words[word_i], char_dict)
+        X[word_i, :len(word_ascii)] = word_ascii
         X[word_i, -1] = pos_dict[raw_pos[word_i]]
         if return_output:
-            y[word_i, :] = ascii_vectorizer(lemmas[word_i], char_dict)
+            lemma_ascii = lemmas[word_i]
+            y[word_i, :len(lemma_ascii)] = ascii_vectorizer(lemma_ascii, char_dict)
 
     if return_output:
         return X, y
@@ -89,6 +91,7 @@ def ascii_devectorizer(x, rev_char_dict):
 
 def gen_dataset(sentences,
                 train_test_split=True,
+                normalize=True,
                 max_words=78,
                 max_chars=25):
     ''' Generate a dataset of (input, output) pairs where the
@@ -107,7 +110,9 @@ def gen_dataset(sentences,
     char_set = set()
     for sentence in sentences:
         char_set = char_set.union(set(''.join(sentence)))
-    char_dict = dict(zip(list(char_set), range(len(char_set))))
+    char_dict = dict(zip(list(char_set), range(1, len(char_set)+1)))
+    char_dict[''] = 0  # 0 is always empty char
+    max_char = max(char_dict.values())
 
     # define all the POS
     with open('../storage/one_hot_list') as f:
@@ -115,12 +120,16 @@ def gen_dataset(sentences,
         pos_dict = {}
         for i, pos in enumerate(pos_list):
             pos_dict[pos] = i
+        max_pos = max(pos_dict.values())
 
     lemmatizer = WordNetLemmatizer().lemmatize
     X = np.zeros((num_sentences, max_words, max_chars+1))
     y = np.zeros((num_sentences, max_words, max_chars))
 
     param_dict = {}
+    param_dict['normalize'] = normalize
+    param_dict['max_char'] = max_char
+    param_dict['max_chars'] = max_chars
     param_dict['max_words'] = max_words
     param_dict['char_dict'] = char_dict
     param_dict['pos_dict'] = pos_dict
@@ -131,8 +140,13 @@ def gen_dataset(sentences,
                 sent_i, num_sentences - sent_i - 1))
 
         X[sent_i, :, :], y[sent_i, :, :] = prepare_sentence(
-            words, char_dict, pos_dict, lemmatizer,
+            words, char_dict, pos_dict, lemmatizer=lemmatizer,
             max_words=max_words, max_chars=max_chars)
+
+    if normalize:
+        X[:, :, :max_chars] /= max_char
+        X[:, :, -1] /= pos_char
+        y /= max_char
 
     if train_test_split:
         (X_train, X_test), (y_train, y_test) = split_data(
@@ -259,6 +273,9 @@ class NeuralLemmatizer(object):
 
         with open(gen_param_set_loc) as fp:
             gen_param_set = cPickle.load(fp)
+            self.max_pos = gen_param_set['max_pos']
+            self.max_char = gen_param_set['max_char']
+            self.normalize = gen_param_set['normalize']
             self.max_words = gen_param_set['max_words']
             self.max_chars = gen_param_set['max_chars']
             self.pos_dict = gen_param_set['pos_dict']
@@ -273,6 +290,17 @@ class NeuralLemmatizer(object):
                              max_words=self.max_words,
                              return_output=False)
 
+        if self.normalize:
+            X[:, :, :self.max_char] /= self.max_char
+            X[:, :, -1] /= self.max_pos
+
         X = window_featurizer(X, size=self.window_size)
         y = self.pred_fun(self.weights, X)
+
+        if self.normalize:
+            y *= self.max_char
+
+        # round to nearest:
+        y = np.round(y)
+        y[y < 0] = 0
         return [ascii_devectorizer(word, self.rev_char_dict) for word in y]
