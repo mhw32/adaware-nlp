@@ -51,12 +51,13 @@ def pad_array(array, max_size):
 
 
 def prepare_sentence(words,
+                     char_dict,
                      pos_dict,
-                     vectorizer,
                      lemmatizer=None,
+                     max_chars=25,
                      max_words=78,
                      return_output=True):
-    X = np.zeros((max_words, 301))
+    X = np.zeros((max_words, max_chars+1))
     if return_output:
         y = np.zeros((max_words, 300))
 
@@ -68,17 +69,28 @@ def prepare_sentence(words,
     num_words = len(words) if len(words) <= max_words else max_words
 
     for word_i in range(num_words):
-        X[word_i, :300] = vectorizer(words[word_i])
+        X[word_i, :max_chars] = ascii_vectorizer(words[word_i], char_dict)
         X[word_i, -1] = pos_dict[raw_pos[word_i]]
         if return_output:
-            y[word_i, :] = vectorizer(lemmas[word_i])
+            y[word_i, :] = ascii_vectorizer(lemmas[word_i], char_dict)
 
     if return_output:
         return X, y
     return X
 
 
-def gen_dataset(sentences, train_test_split=True, max_words=78):
+def ascii_vectorizer(s, char_dict):
+    return np.array([char_dict[ch] for ch in s])
+
+
+def ascii_devectorizer(x, rev_char_dict):
+    return ''.join([rev_char_dict[n]for n in x])
+
+
+def gen_dataset(sentences,
+                train_test_split=True,
+                max_words=78,
+                max_chars=25):
     ''' Generate a dataset of (input, output) pairs where the
         input is a vector of characters + POS and output is
         a vector of characters for the lemmatized form.
@@ -91,10 +103,13 @@ def gen_dataset(sentences, train_test_split=True, max_words=78):
 
     num_sentences = len(sentences)
 
-    # replace me with GloVe when complete
-    model_path = os.path.abspath('../storage/GoogleNews-vectors-negative300.bin')
-    model = models.Word2Vec.load_word2vec_format(
-        model_path, binary=True)
+    # define a list of all possible chars
+    char_set = set()
+    for sentence in sentences:
+        char_set = char_set.union(set(''.join(sentence)))
+    char_dict = dict(zip(list(char_set), range(len(char_set))))
+
+    # define all the POS
     with open('../storage/one_hot_list') as f:
         pos_list = cPickle.load(f)
         pos_dict = {}
@@ -102,14 +117,13 @@ def gen_dataset(sentences, train_test_split=True, max_words=78):
             pos_dict[pos] = i
 
     lemmatizer = WordNetLemmatizer().lemmatize
-    vectorizer = lambda x: model[x] if x in model else np.zeros(300)
-    X = np.zeros((num_sentences, max_words, 301))
-    y = np.zeros((num_sentences, max_words, 300))
+    X = np.zeros((num_sentences, max_words, max_chars+1))
+    y = np.zeros((num_sentences, max_words, max_chars))
 
     param_dict = {}
     param_dict['max_words'] = max_words
+    param_dict['char_dict'] = char_dict
     param_dict['pos_dict'] = pos_dict
-    param_dict['vectorizer_loc'] = model_path
 
     for sent_i, words in enumerate(sentences):
         if sent_i % 1000 == 0:
@@ -117,7 +131,8 @@ def gen_dataset(sentences, train_test_split=True, max_words=78):
                 sent_i, num_sentences - sent_i - 1))
 
         X[sent_i, :, :], y[sent_i, :, :] = prepare_sentence(
-            words, pos_dict, vectorizer, lemmatizer, max_words=max_words)
+            words, char_dict, pos_dict, lemmatizer,
+            max_words=max_words, max_chars=max_chars)
 
     if train_test_split:
         (X_train, X_test), (y_train, y_test) = split_data(
@@ -244,27 +259,20 @@ class NeuralLemmatizer(object):
 
         with open(gen_param_set_loc) as fp:
             gen_param_set = cPickle.load(fp)
-            vectorizer_loc = gen_param_set['vectorizer_loc']
             self.max_words = gen_param_set['max_words']
+            self.max_chars = gen_param_set['max_chars']
             self.pos_dict = gen_param_set['pos_dict']
-
-        model = models.Word2Vec.load_word2vec_format(
-            vectorizer_loc, binary=True)
-        self.model = model
-        self.vectorizer = lambda x: model[x] if x in model else np.zeros(300)
+            self.char_dict = gen_param_set['char_dict']
+            self.rev_char_dict = {v: k for k, v in self.char_dict.items()}
 
     def lemmatize(self, sentence):
         X = prepare_sentence(sentence,
+                             self.char_dict,
                              self.pos_dict,
-                             self.vectorizer,
+                             max_chars=self.max_chars,
                              max_words=self.max_words,
                              return_output=False)
 
         X = window_featurizer(X, size=self.window_size)
         y = self.pred_fun(self.weights, X)
-
-        # convert y back to a bunch of words
-        y_words = []
-        for y_vec in y:
-            y_word = self.model.similar_by_vector(y_vec, topn=1, restrict_vocab=10000)
-        y_words.append(y_word)
+        return [ascii_devectorizer(word, self.rev_char_dict) for word in y]
