@@ -30,7 +30,16 @@ def cosine_dist(v1, v2):
     len2 = np.sqrt(np.dot(v2, v2.T))
     return prod / (len1 * len2)
 
+
+def mat_cosine_dist(X, Y):
+    prod = np.diagonal(np.dot(X, Y.T))
+    len1 = np.sqrt(np.diagonal(np.dot(X, X.T)))
+    len2 = np.sqrt(np.diagonal(np.dot(Y, Y.T)))
+    return np.divide(np.divide(prod, len1), len2)
+
+
 def identity(X): return X
+
 
 def build(input_count,
           output_count,
@@ -58,6 +67,7 @@ def build(input_count,
     '''
 
     # only connections from the same letters exist
+    # no hidden nodes (directly fully-connected)
     layer_sizes = [input_count, output_count]
     num_reps = input_count / output_count
     num_weights = (num_reps+1) * output_count  # bias
@@ -77,10 +87,7 @@ def build(input_count,
         ''' Measure likelihoods by 1 - cosine similiarity between
             the predicted and the real lemma vectors '''
         preds = outputs(weights, inputs)
-        dists = 0
-        for i in range(inputs.shape[0]):
-            dists += (1 - cosine_dist(preds[i, :], outputs[i, :]))
-        log_lik = np.log(dists / inputs.shape[0])
+        log_lik = np.log(np.sum(1 - mat_cosine_dist(preds, outputs)) / inputs.shape[0])
         return log_lik
 
     return outputs, log_likelihood, num_weights
@@ -92,7 +99,8 @@ def train_mlp(
         init_weights=None,
         num_epochs=100,
         batch_size=128,
-        param_scale=0.01):
+        param_scale=0.01,
+        l2_lambda=0):
 
     input_count = obs_set.shape[0]
     output_count = out_set.shape[0]
@@ -109,7 +117,7 @@ def train_mlp(
         return slice(idx * batch_size, (idx+1) * batch_size)
 
     def loss(weights, x, y):
-        return -loglike_fun(weights, x, y)
+        return -loglike_fun(weights, x, y) + l2_lambda * np.sum(np.power(weights, 2))
 
     def batch_loss(weights, iter):
         idx = batch_indices(iter)

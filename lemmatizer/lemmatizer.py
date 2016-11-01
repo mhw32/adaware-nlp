@@ -172,7 +172,8 @@ def train_lemmatizer(
     batch_size=256,
     param_scale=0.01,
     num_epochs=250,
-    step_size=0.001
+    step_size=0.001,
+    l2_lambda=0
 ):
     ''' function to train the NN for mapping vectorized
         characters + POS --> a vectorized lemma
@@ -209,17 +210,25 @@ def train_lemmatizer(
     param_set['num_epochs'] = num_epochs
     param_set['step_size'] = step_size
 
-    obs_set = obs_set.reshape(-1, obs_set.shape[-1])
+    new_obs_set = np.zeros((obs_set.shape[0], obs_set.shape[1],
+        obs_set.shape[2]*(sum(window_size)+1)))
+
+    # loop through each sentence and window featurize it
+    for sent_i in range(obs_set.shape[0]):
+        new_obs_set[sent_i, :, :] = window_featurizer(obs_set[sent_i, :, :],
+            size=window_size)
+
+    # flatten vectors
+    new_obs_set = new_obs_set.reshape(-1, new_obs_set.shape[-1])
     out_set = out_set.reshape(-1, out_set.shape[-1])
 
-    obs_set, out_set = window_featurizer(obs_set, y=out_set, size=window_size)
-
     pred_fun, loglike_fun, trained_weights = \
-        thin_cosine_mlp.train_nn_regressor(obs_set,
-                                           out_set,
-                                           batch_size=batch_size,
-                                           param_scale=param_scale,
-                                           num_epochs=num_epochs)
+        thin_cosine_mlp.train_mlp(new_obs_set,
+                                  out_set,
+                                  batch_size=batch_size,
+                                  param_scale=param_scale,
+                                  num_epochs=num_epochs,
+                                  l2_lambda=l2_lambda)
 
     param_set['pred_fun'] = pred_fun
     param_set['loglike_fun'] = loglike_fun
