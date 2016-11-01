@@ -21,13 +21,20 @@ from __future__ import print_function
 
 import autograd.numpy as np
 import autograd.scipy.stats.norm as norm
-from autograd.scipy import spatial
 from autograd import grad
 
 
+def cosine_dist(v1, v2):
+    prod = np.dot(v1, v2.T)
+    len1 = np.sqrt(np.dot(v1, v1.T))
+    len2 = np.sqrt(np.dot(v2, v2.T))
+    return prod / (len1 * len2)
+
+def identity(X): return X
+
 def build(input_count,
           output_count,
-          nonlinearity=np.identity):
+          nonlinearity=identity):
     ''' Builds the multi-layer perceptron. Assume that any/all
         one-hot encoding has already been done. This supports
         continuous regression only.
@@ -54,14 +61,15 @@ def build(input_count,
     layer_sizes = [input_count, output_count]
     num_reps = input_count / output_count
     num_weights = (num_reps+1) * output_count  # bias
-    base_idx = np.array([i for i in range(input_count) if i % output_count == 0])
+    base_idx = np.array([i for i in range(num_weights) if i % output_count == 0])
 
     def outputs(weights, inputs):
-        outputs = np.zeros(inputs.shape)
+        outputs = np.zeros((inputs.shape[0], output_count))
         for i in range(output_count):
             mask = weights[base_idx+i]
             W, b = mask[:-1], mask[-1]
-            outputs[base_idx+i] = np.dot(inputs, W) + b
+            I = inputs[:, base_idx[:-1]+i]
+            outputs[:, i] = np.dot(I, W) + b
         outputs = nonlinearity(outputs)
         return outputs
 
@@ -69,7 +77,10 @@ def build(input_count,
         ''' Measure likelihoods by 1 - cosine similiarity between
             the predicted and the real lemma vectors '''
         preds = outputs(weights, inputs)
-        log_lik = np.log(np.sum(1 - spatial.distance.cosine(pred, outputs)) / len(pred))
+        dists = 0
+        for i in range(inputs.shape[0]):
+            dists += (1 - cosine_dist(preds[i, :], outputs[i, :]))
+        log_lik = np.log(dists / inputs.shape[0])
         return log_lik
 
     return outputs, log_likelihood, num_weights
