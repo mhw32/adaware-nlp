@@ -25,19 +25,11 @@ from autograd.scipy import spatial
 from autograd import grad
 
 
-def unpack_layers(weights):
-    for m, n in layer_shapes:
-        cur_layer_weights = weights[:m*n]     .reshape((m, n))
-        cur_layer_biases  = weights[m*n:m*n+n].reshape((1, n))
-        yield cur_layer_weights, cur_layer_biases
-        weights = weights[(m+1)*n:]
-
-
 def build(input_count,
           output_count,
           nonlinearity=np.identity):
     ''' Builds the multi-layer perceptron. Assume that any/all
-        one-hot encoding has already been one. This supports
+        one-hot encoding has already been done. This supports
         continuous regression only.
         Args
         ----
@@ -61,7 +53,7 @@ def build(input_count,
     # only connections from the same letters exist
     layer_sizes = [input_count, output_count]
     num_reps = input_count / output_count
-    num_weights = (num_reps+1) * output_count
+    num_weights = (num_reps+1) * output_count  # bias
     base_idx = np.array([i for i in range(input_count) if i % output_count == 0])
 
     def outputs(weights, inputs):
