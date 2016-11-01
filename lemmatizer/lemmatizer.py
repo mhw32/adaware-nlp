@@ -19,8 +19,7 @@ import cPickle
 sys.path.append('../common')
 from util import batch_index_generator, split_data
 
-sys.path.append('../models')
-import nn_regressor
+import thin_cosine_mlp
 
 # to generate a training dataset
 import numpy as np
@@ -51,103 +50,72 @@ def pad_array(array, max_size):
 
 
 def prepare_sentence(words,
-                     char_dict,
-                     pos_dict,
+                     vectorizer=None,
                      lemmatizer=None,
-                     max_chars=25,
                      max_words=78,
                      return_output=True):
-    X = np.zeros((max_words, max_chars+1))
+    X = np.zeros((max_words, 300))
     if return_output:
-        y = np.zeros((max_words, max_chars))
-
-    raw_pos = [p[1]for p in pos_tag(words)]
-    pos     = [str(treebank_to_simple(p, default=wordnet.NOUN)) for p in raw_pos]
-    if return_output:
+        y = np.zeros((max_words, 300))
+        raw_pos = [p[1]for p in pos_tag(words)]
+        pos     = [str(treebank_to_simple(p, default=wordnet.NOUN)) for p in raw_pos]
         lemmas  = [str(lemmatizer(w, pos=p)) for (w,p) in zip(words, pos)]
 
     num_words = len(words) if len(words) <= max_words else max_words
 
     for word_i in range(num_words):
-        word_ascii = ascii_vectorizer(words[word_i], char_dict)
-        X[word_i, :len(word_ascii)] = word_ascii
-        X[word_i, -1] = pos_dict[raw_pos[word_i]]
+        word_vector = vectorizer(words[word_i])
+        X[word_i, :] = word_vector
+
         if return_output:
-            lemma_ascii = lemmas[word_i]
-            y[word_i, :len(lemma_ascii)] = ascii_vectorizer(lemma_ascii, char_dict)
+            lemma_vector = lemmas[word_i]
+            y[word_i, :] = vectorizer(lemma_vector)
 
     if return_output:
         return X, y
     return X
 
 
-def ascii_vectorizer(s, char_dict):
-    return np.array([char_dict[ch] for ch in s])
-
-
-def ascii_devectorizer(x, rev_char_dict):
-    return ''.join([rev_char_dict[n]for n in x])
-
-
 def gen_dataset(sentences,
-                train_test_split=True,
-                normalize=True,
                 max_words=78,
-                max_chars=25):
+                train_test_split=True):
     ''' Generate a dataset of (input, output) pairs where the
         input is a vector of characters + POS and output is
         a vector of characters for the lemmatized form.
 
         Args
         ----
-        sentences : list of sentences where each sentence is list of tokens
-        max_words : maximum number of words allowed in sentence
+        sentences : list
+                    list of sentences where each sentence is list of tokens
+        max_words : integer
+                    maximum number of words allowed in sentence
+        train_test_split : boolean
+                           whether to split data into 2 sets
     '''
 
     num_sentences = len(sentences)
-
-    # define a list of all possible chars
-    char_set = set()
-    for sentence in sentences:
-        char_set = char_set.union(set(''.join(sentence)))
-    char_dict = dict(zip(list(char_set), range(1, len(char_set)+1)))
-    char_dict[''] = 0  # 0 is always empty char
-    max_char = max(char_dict.values())
-
-    # define all the POS
-    with open('../storage/one_hot_list') as f:
-        pos_list = cPickle.load(f)
-        pos_dict = {}
-        for i, pos in enumerate(pos_list):
-            pos_dict[pos] = i
-        max_pos = max(pos_dict.values())
-
+    model = models.Word2Vec.load_word2vec_format(
+        '../storage/GoogleNews-vectors-negative300.bin',
+        binary=True)
+    vectorizer = lambda x: model[x] if x in model else np.zeros(300)
     lemmatizer = WordNetLemmatizer().lemmatize
-    X = np.zeros((num_sentences, max_words, max_chars+1))
-    y = np.zeros((num_sentences, max_words, max_chars))
+
+    X = np.zeros((num_sentences, max_words, 300))
+    y = np.zeros((num_sentences, max_words, 300))
 
     param_dict = {}
-    param_dict['normalize'] = normalize
-    param_dict['max_char'] = max_char
-    param_dict['max_pos'] = max_pos
-    param_dict['max_chars'] = max_chars
     param_dict['max_words'] = max_words
-    param_dict['char_dict'] = char_dict
-    param_dict['pos_dict'] = pos_dict
 
     for sent_i, words in enumerate(sentences):
         if sent_i % 1000 == 0:
             print("{} sentences parsed. {} remaining.".format(
                 sent_i, num_sentences - sent_i - 1))
 
-        X[sent_i, :, :], y[sent_i, :, :] = prepare_sentence(
-            words, char_dict, pos_dict, lemmatizer=lemmatizer,
-            max_words=max_words, max_chars=max_chars)
-
-    if normalize:
-        X[:, :, :max_chars] /= max_char
-        X[:, :, -1] /= max_pos
-        y /= max_char
+        X[sent_i, :, :], y[sent_i, :, :] = \
+            prepare_sentence(words,
+                             vectorizer=vectorizer,
+                             lemmatizer=lemmatizer,
+                             max_words=max_words)
 
     if train_test_split:
         (X_train, X_test), (y_train, y_test) = split_data(
@@ -157,7 +125,7 @@ def gen_dataset(sentences,
     return (X, y), param_dict
 
 
-def window_featurizer(X, y=None, size=[1,1]):
+def window_featurizer(X, y=None, pad=True, size=[1,1]):
     ''' Given some time series of data, it might be a good idea
         to include some temporal information by adding neighboring
         vectors.
@@ -168,6 +136,9 @@ def window_featurizer(X, y=None, size=[1,1]):
             inputs matrix
         y : 2D numpy
             outputs matrix
+        pad : boolean
+              whether not to add zeros to the beginning and ends of
+              each sentence to keep 1st and last word
         size : list of 2
                first is number prior, second is number after
     '''
@@ -179,8 +150,10 @@ def window_featurizer(X, y=None, size=[1,1]):
     if not y is None:
         window_y = np.zeros((y.shape[0], y.shape[1]))
 
-    # prepend + postpend with 0's
-    X = np.vstack((np.zeros((size[0], X.shape[1])), X, np.zeros((size[1], X.shape[1]))))
+    if pad:
+        # prepend + postpend with 0's
+        X = np.vstack((np.zeros((size[0], X.shape[1])),
+            X, np.zeros((size[1], X.shape[1]))))
 
     for i in range(size[0],X.shape[0]-size[1]-1):
         for j,k in enumerate(range(i-size[0],i+size[1]+1)):
@@ -242,13 +215,11 @@ def train_lemmatizer(
     obs_set, out_set = window_featurizer(obs_set, y=out_set, size=window_size)
 
     pred_fun, loglike_fun, trained_weights = \
-        nn_regressor.train_nn_regressor(obs_set,
-                                        out_set,
-                                        [1000, 500],
-                                        batch_size=batch_size,
-                                        param_scale=param_scale,
-                                        num_epochs=num_epochs,
-                                        step_size=step_size)
+        thin_cosine_mlp.train_nn_regressor(obs_set,
+                                           out_set,
+                                           batch_size=batch_size,
+                                           param_scale=param_scale,
+                                           num_epochs=num_epochs)
 
     param_set['pred_fun'] = pred_fun
     param_set['loglike_fun'] = loglike_fun
@@ -274,34 +245,19 @@ class NeuralLemmatizer(object):
 
         with open(gen_param_set_loc) as fp:
             gen_param_set = cPickle.load(fp)
-            self.max_pos = gen_param_set['max_pos']
-            self.max_char = gen_param_set['max_char']
-            self.normalize = gen_param_set['normalize']
             self.max_words = gen_param_set['max_words']
-            self.max_chars = gen_param_set['max_chars']
-            self.pos_dict = gen_param_set['pos_dict']
-            self.char_dict = gen_param_set['char_dict']
-            self.rev_char_dict = {v: k for k, v in self.char_dict.items()}
+
+        self.model = models.Word2Vec.load_word2vec_format(
+            '../storage/GoogleNews-vectors-negative300.bin',
+            binary=True)
 
     def lemmatize(self, sentence):
         X = prepare_sentence(sentence,
-                             self.char_dict,
-                             self.pos_dict,
-                             max_chars=self.max_chars,
+                             vectorizer=self.model,
                              max_words=self.max_words,
                              return_output=False)
 
-        if self.normalize:
-            X[:, :self.max_char] /= self.max_char
-            X[:, -1] /= self.max_pos
-
         X = window_featurizer(X, size=self.window_size)
         y = self.pred_fun(self.weights, X)
-
-        if self.normalize:
-            y *= self.max_char
-
-        # round to nearest:
-        y = np.round(y)
-        y[y < 0] = 0
-        return [ascii_devectorizer(word, self.rev_char_dict) for word in y]
+        # map y's back to words
+        return y
