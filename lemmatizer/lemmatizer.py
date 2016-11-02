@@ -255,10 +255,12 @@ class NeuralLemmatizer(object):
         self.model = models.Word2Vec.load_word2vec_format(
             '../storage/GoogleNews-vectors-negative300.bin',
             binary=True)
+        self.vectorizer = lambda x: self.model[x] \
+            if x in self.model else np.ones(300)*ZERO_EPSILON
 
     def lemmatize(self, sentence):
         X = prepare_sentence(sentence,
-                             vectorizer=self.model,
+                             vectorizer=self.vectorizer,
                              max_words=self.max_words,
                              return_output=False)
 
