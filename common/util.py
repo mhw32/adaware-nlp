@@ -1,7 +1,8 @@
 from collections import defaultdict
 import numpy as np
 import json
-
+from sklearn.neighbors import LSHForest
+import itertools
 
 def is_int(x):
     try:
@@ -86,3 +87,27 @@ def split_data(in_data, out_data=None, frac=0.80):
         return (tr_in_data, te_in_data), (tr_out_data, te_out_data)
 
     return (tr_in_data, te_in_data)
+
+def grouper(iterable, n): # Might combine this with batch_index_generator
+    it = iter(iterable)
+    while True:
+       chunk = tuple(itertools.islice(it, n))
+       if not chunk:
+           return
+       yield chunk
+
+def train_LSHForest(model, batch_size=1000, n_candidates=50, n_estimators=10):
+    lshf = LSHForest(n_candidates=n_candidates, n_estimators=n_estimators)
+    for batch in grouper(model.index2word, batch_size):
+        array = np.array([model[word] for word in batch])
+        lshf.partial_fit(array)
+    return lshf
+
+def devectorize(vectors, lsh_forest, neighbors=1):
+    ''' Returns an (n x neighbors) array of words, where row i contains the
+    nearest neighbor words for the word vector i
+    '''
+    dists, indices = lsh_forest.kneighbors(vectors, n_neighbors=neighbors)
+    vec_i2w = np.vectorize(lambda index:model.index2word[index])
+    return vec_i2w(indices)
+

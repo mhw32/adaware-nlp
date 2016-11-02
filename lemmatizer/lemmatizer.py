@@ -17,7 +17,7 @@ import dill
 import cPickle
 
 sys.path.append('../common')
-from util import batch_index_generator, split_data
+from util import batch_index_generator, split_data, devectorize
 
 import thin_cosine_mlp
 
@@ -257,6 +257,8 @@ class NeuralLemmatizer(object):
             binary=True)
         self.vectorizer = lambda x: self.model[x] \
             if x in self.model else np.ones(300)*ZERO_EPSILON
+        self.lsh_forest = train_LSHForest(self.model)
+
 
     def lemmatize(self, sentence):
         X = prepare_sentence(sentence,
@@ -266,5 +268,5 @@ class NeuralLemmatizer(object):
         X = X[:len(sentence)]
         X = window_featurizer(X, size=self.window_size)
         y = self.pred_fun(self.weights, X)
-        # map y's back to words
-        return y
+        return devectorize(y, self.lsh_forest)
+
