@@ -17,7 +17,7 @@ import dill
 import cPickle
 
 sys.path.append('../common')
-from util import batch_index_generator, split_data, devectorize
+from util import batch_index_generator, split_data, devectorize, train_LSHForest
 
 import thin_cosine_mlp
 
