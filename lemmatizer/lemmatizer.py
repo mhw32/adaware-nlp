@@ -28,6 +28,7 @@ from nltk import pos_tag, word_tokenize
 from nltk.corpus import wordnet
 from nltk.stem import WordNetLemmatizer
 
+ZERO_EPSILON=1e-7
 
 def treebank_to_simple(penn_tag, default=None):
     morphy_tag = {'NN':wordnet.NOUN,
@@ -40,23 +41,14 @@ def treebank_to_simple(penn_tag, default=None):
     return default
 
 
-def pad_array(array, max_size):
-    a = np.zeros(max_size)
-    if len(array) > max_size:
-        a = array[:max_size]
-    else:
-        a[:len(array)] = array
-    return a
-
-
 def prepare_sentence(words,
                      vectorizer=None,
                      lemmatizer=None,
                      max_words=78,
                      return_output=True):
-    X = np.zeros((max_words, 300))
+    X = np.ones((max_words, 300))*ZERO_EPSILON
     if return_output:
-        y = np.zeros((max_words, 300))
+        y = np.ones((max_words, 300))*ZERO_EPSILON
         raw_pos = [p[1]for p in pos_tag(words)]
         pos     = [str(treebank_to_simple(p, default=wordnet.NOUN)) for p in raw_pos]
         lemmas  = [str(lemmatizer(w, pos=p)) for (w,p) in zip(words, pos)]
@@ -97,7 +89,7 @@ def gen_dataset(sentences,
     model = models.Word2Vec.load_word2vec_format(
         '../storage/GoogleNews-vectors-negative300.bin',
         binary=True)
-    vectorizer = lambda x: model[x] if x in model else np.zeros(300)
+    vectorizer = lambda x: model[x] if x in model else np.ones(300)*ZERO_EPSILON
     lemmatizer = WordNetLemmatizer().lemmatize
 
     X = np.zeros((num_sentences, max_words, 300))
@@ -158,10 +150,10 @@ def window_featurizer(X, y=None, pad=True, size=[1,1]):
 
     if pad:
         # prepend + postpend with 0's
-        X = np.vstack((np.zeros((size[0], X.shape[1])),
-            X, np.zeros((size[1], X.shape[1]))))
+        X = np.vstack((np.ones((size[0], X.shape[1]))*ZERO_EPSILON,
+            X, np.ones((size[1], X.shape[1]))*ZERO_EPSILON))
 
-    for i in range(size[0],X.shape[0]-size[1]-1):
+    for i in range(size[0],X.shape[0]-size[1]):
         for j,k in enumerate(range(i-size[0],i+size[1]+1)):
             window_X[i-size[0], j*X.shape[1]:(j+1)*X.shape[1]] = X[k, :]
         if not y is None:

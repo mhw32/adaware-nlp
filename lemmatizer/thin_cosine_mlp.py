@@ -132,8 +132,9 @@ def train_mlp(
         return loss(weights, obs_set[idx, :], out_set[idx, :])
 
     def callback(x, i, g):
-        print('iter {}  |  training loss {}'.format(
-            i, loss(x, obs_set, out_set)))
+        ll = loss(x, obs_set, out_set)
+        print('iter {}  |  logloss {}  |  loss {}'.format(
+            i, ll, np.exp(ll)))
 
     grad_fun = grad(batch_loss)
     trained_weights = adam(grad_fun,
