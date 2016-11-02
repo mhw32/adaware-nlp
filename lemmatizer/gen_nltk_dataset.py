@@ -47,9 +47,9 @@ def train_brown_lemmatizer(output_folder):
             dill.dump(nn_param_set, f)
 
 
-def test_brown_lemmatizer(sentence):
+def test_brown_lemmatizer(sentence, output_folder):
     lemmatizer = NeuralLemmatizer(
-        '_example/100/gen_param_dict.pkl',
-        '_example/100/nn_param_dict.pkl')
+        os.path.join(output_folder, 'gen_param_dict.pkl'),
+        os.path.join(output_folder, 'nn_param_dict.pkl'))
 
     return lemmatizer.lemmatize(sentence)

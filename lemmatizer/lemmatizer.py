@@ -263,7 +263,7 @@ class NeuralLemmatizer(object):
                              vectorizer=self.vectorizer,
                              max_words=self.max_words,
                              return_output=False)
-
+        X = X[:len(sentence)]
         X = window_featurizer(X, size=self.window_size)
         y = self.pred_fun(self.weights, X)
         # map y's back to words
