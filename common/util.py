@@ -97,6 +97,23 @@ def grouper(iterable, n): # Might combine this with batch_index_generator
        yield chunk
 
 def train_LSHForest(model, batch_size=1000, n_candidates=50, n_estimators=10):
+    ''' Given a large wordvec or GloVe model, we need to efficiently be able
+        to get a word back from a vector. Current methods rely on
+        inefficient search algorithms.
+
+        Args
+        ----
+        model : gensim.model
+                pretrained WordVec model
+        batch_size : int
+        n_candidates : int
+                       number of candidates for LSH to generate
+        n_estimators : number of LSH trees in forest
+
+        Returns
+        -------
+        lshf : LSHForest
+    '''
     lshf = LSHForest(n_candidates=n_candidates, n_estimators=n_estimators)
     for batch in grouper(model.index2word, batch_size):
         array = np.array([model[word] for word in batch])
@@ -105,7 +122,7 @@ def train_LSHForest(model, batch_size=1000, n_candidates=50, n_estimators=10):
 
 def devectorize(vectors, lsh_forest, neighbors=1):
     ''' Returns an (n x neighbors) array of words, where row i contains the
-    nearest neighbor words for the word vector i
+        nearest neighbor words for the word vector i
     '''
     dists, indices = lsh_forest.kneighbors(vectors, n_neighbors=neighbors)
     vec_i2w = np.vectorize(lambda index:model.index2word[index])
