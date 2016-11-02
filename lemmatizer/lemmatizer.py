@@ -102,6 +102,8 @@ def gen_dataset(sentences,
 
     X = np.zeros((num_sentences, max_words, 300))
     y = np.zeros((num_sentences, max_words, 300))
+    K = np.zeros(num_sentences)
+    I = np.arange(num_sentences)
 
     param_dict = {}
     param_dict['max_words'] = max_words
@@ -117,12 +119,16 @@ def gen_dataset(sentences,
                              lemmatizer=lemmatizer,
                              max_words=max_words)
 
-    if train_test_split:
-        (X_train, X_test), (y_train, y_test) = split_data(
-            X, out_data=y, frac=0.80)
+        K[sent_i] = len(words)  # keep track of num words in sentence
 
-        return (X_train, X_test), (y_train, y_test), param_dict
-    return (X, y), param_dict
+    if train_test_split:
+        (X_train, X_test), (I_train, I_test) = split_data(
+            X, out_data=I, frac=0.80)
+        y_train, y_test = y[I_train], y[I_test]
+        K_train, K_test = K[I_train], K[I_test]
+
+        return (X_train, X_test), (y_train, y_test), (K_train, K_test), param_dict
+    return (X, y, K), param_dict
 
 
 def window_featurizer(X, y=None, pad=True, size=[1,1]):
@@ -167,7 +173,7 @@ def window_featurizer(X, y=None, pad=True, size=[1,1]):
 def train_lemmatizer(
     obs_set,
     out_set,
-    num_hiddens,
+    count_set,
     window_size=[1,1],
     batch_size=256,
     param_scale=0.01,
@@ -180,16 +186,12 @@ def train_lemmatizer(
 
         Args
         ----
-        X_train : np array
+        obs_set : np array
                   created by gen_dataset
-        y_train : np.array
+        out_set : np.array
                   created by gen_dataset
-        X_test : np.array
-                 created by gen_dataset
-        y_test : np.array
-                 created by gen_dataset
-        num_hiddens : integer
-                      LSTM hidden nodes
+        count_set : np.array
+                    created by gen_dataset
         window_size : integer
                       group nearby vecvtors
         batch_size : integer
@@ -203,28 +205,30 @@ def train_lemmatizer(
     '''
 
     param_set = {}
-    param_set['num_hiddens'] = num_hiddens
     param_set['window_size'] = window_size
     param_set['batch_size'] = batch_size
     param_set['param_scale'] = param_scale
     param_set['num_epochs'] = num_epochs
     param_set['step_size'] = step_size
 
-    new_obs_set = np.zeros((obs_set.shape[0], obs_set.shape[1],
-        obs_set.shape[2]*(sum(window_size)+1)))
+    obs_lst, out_lst = [], []
 
     # loop through each sentence and window featurize it
     for sent_i in range(obs_set.shape[0]):
-        new_obs_set[sent_i, :, :] = window_featurizer(obs_set[sent_i, :, :],
-            size=window_size)
+        obs_slice = obs_set[sent_i, :, :][:count_set[sent_i]]
+        out_slice = out_set[sent_i, :, :][:count_set[sent_i]]
+        obs_window = window_featurizer(obs_slice, size=window_size)
+
+        obs_lst.append(obs_window)
+        out_lst.append(out_slice)
 
     # flatten vectors
-    new_obs_set = new_obs_set.reshape(-1, new_obs_set.shape[-1])
-    out_set = out_set.reshape(-1, out_set.shape[-1])
+    inputs = np.concatenate(obs_lst)
+    outputs = np.concatenate(out_lst)
 
     pred_fun, loglike_fun, trained_weights = \
-        thin_cosine_mlp.train_mlp(new_obs_set,
-                                  out_set,
+        thin_cosine_mlp.train_mlp(inputs,
+                                  outputs,
                                   batch_size=batch_size,
                                   param_scale=param_scale,
                                   num_epochs=num_epochs,

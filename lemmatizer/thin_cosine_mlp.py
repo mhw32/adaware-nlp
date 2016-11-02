@@ -23,6 +23,10 @@ import autograd.numpy as np
 import autograd.scipy.stats.norm as norm
 from autograd import grad
 
+import sys
+sys.path.append('../models')
+from optimizers import adam
+
 
 def cosine_dist(v1, v2):
     prod = np.dot(v1, v2.T)
@@ -32,9 +36,12 @@ def cosine_dist(v1, v2):
 
 
 def mat_cosine_dist(X, Y):
-    prod = np.diagonal(np.dot(X, Y.T))
-    len1 = np.sqrt(np.diagonal(np.dot(X, X.T)))
-    len2 = np.sqrt(np.diagonal(np.dot(Y, Y.T)))
+    prod = np.diagonal(np.dot(X, Y.T),
+        offset=0, axis1=-1, axis2=-2)
+    len1 = np.sqrt(np.diagonal(np.dot(X, X.T),
+        offset=0, axis1=-1, axis2=-2))
+    len2 = np.sqrt(np.diagonal(np.dot(Y, Y.T),
+        offset=0, axis1=-1, axis2=-2))
     return np.divide(np.divide(prod, len1), len2)
 
 
@@ -74,20 +81,21 @@ def build(input_count,
     base_idx = np.array([i for i in range(num_weights) if i % output_count == 0])
 
     def outputs(weights, inputs):
-        outputs = np.zeros((inputs.shape[0], output_count))
+        targets = []
         for i in range(output_count):
             mask = weights[base_idx+i]
             W, b = mask[:-1], mask[-1]
             I = inputs[:, base_idx[:-1]+i]
-            outputs[:, i] = np.dot(I, W) + b
-        outputs = nonlinearity(outputs)
-        return outputs
+            targets.append(np.dot(I, W) + b)
+        targets = np.array(targets).T
+        targets = nonlinearity(targets)
+        return targets
 
-    def log_likelihood(weights, inputs, outputs):
+    def log_likelihood(weights, inputs, targets):
         ''' Measure likelihoods by 1 - cosine similiarity between
             the predicted and the real lemma vectors '''
         preds = outputs(weights, inputs)
-        log_lik = np.log(np.sum(1 - mat_cosine_dist(preds, outputs)) / inputs.shape[0])
+        log_lik = np.log(np.sum(1 - mat_cosine_dist(preds, targets)) / inputs.shape[0])
         return log_lik
 
     return outputs, log_likelihood, num_weights
@@ -102,11 +110,11 @@ def train_mlp(
         param_scale=0.01,
         l2_lambda=0):
 
-    input_count = obs_set.shape[0]
-    output_count = out_set.shape[0]
-    num_batches = int(np.ceil(obs_set.shape[1] / float(batch_size)))
+    input_count = obs_set.shape[-1]
+    output_count = out_set.shape[-1]
+    num_batches = int(np.ceil(obs_set.shape[0] / float(batch_size)))
 
-    pred_fun, loglike_fun, num_weights = mlp.build(
+    pred_fun, loglike_fun, num_weights = build(
         input_count, output_count)
 
     if init_weights is None:
@@ -121,7 +129,7 @@ def train_mlp(
 
     def batch_loss(weights, iter):
         idx = batch_indices(iter)
-        return loss(weights, obs_set[:, idx], out_set[:, idx])
+        return loss(weights, obs_set[idx, :], out_set[idx, :])
 
     def callback(x, i, g):
         print('iter {}  |  training loss {}'.format(

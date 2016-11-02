@@ -13,13 +13,16 @@ def gen_brown_dataset(output_folder, num=None):
             num = len(sentences)
         sentences = sentences[:num]
 
-    (X_train, X_test), (y_train, y_test), param_dict = gen_dataset(sentences)
+    (X_train, X_test), (y_train, y_test), (K_train, K_test), param_dict = \
+        gen_dataset(sentences)
 
     if output_folder:
         np.save(os.path.join(output_folder, 'X_train.npy'), X_train)
         np.save(os.path.join(output_folder, 'X_test.npy'), X_test)
         np.save(os.path.join(output_folder, 'y_train.npy'), y_train)
         np.save(os.path.join(output_folder, 'y_test.npy'), y_test)
+        np.save(os.path.join(output_folder, 'K_train.npy'), K_train)
+        np.save(os.path.join(output_folder, 'K_test.npy'), K_test)
 
         with open(os.path.join(output_folder, 'gen_param_dict.pkl'), 'w') as f:
             cPickle.dump(param_dict, f)
@@ -28,14 +31,15 @@ def gen_brown_dataset(output_folder, num=None):
 def train_brown_lemmatizer(output_folder):
     obs_set = np.load(os.path.join(output_folder, 'X_train.npy'))
     out_set = np.load(os.path.join(output_folder, 'y_train.npy'))
+    count_set = np.load(os.path.join(output_folder, 'K_train.npy'))
     nn_param_set = train_lemmatizer(
         obs_set,
         out_set,
-        [1000, 500],
+        count_set,
         window_size=[1,1],
         batch_size=256,
         param_scale=0.01,
-        num_epochs=10,
+        num_epochs=1000,
         step_size=0.001)
 
     if output_folder:
