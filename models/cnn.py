@@ -195,4 +195,3 @@ def train_cnn(inputs,
                            callback=print_perf)
 
     return pred_fun, loss_fun, trained_weights
-
