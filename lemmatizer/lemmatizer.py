@@ -72,8 +72,8 @@ def gen_dataset(sentences,
                 max_words=78,
                 train_test_split=True):
     ''' Generate a dataset of (input, output) pairs where the
-        input is a vector of characters + POS and output is
-        a vector of characters for the lemmatized form.
+        input is an embedded vector and output is
+        an embedded vector for the lemmatized form.
 
         Args
         ----
@@ -241,6 +241,7 @@ class NeuralLemmatizer(object):
                  gen_param_set_loc,
                  nn_param_set_loc):
 
+        print('loading NN params')
         with open(nn_param_set_loc) as fp:
             nn_param_set = dill.load(fp)
             self.pred_fun = nn_param_set['pred_fun']
@@ -248,15 +249,20 @@ class NeuralLemmatizer(object):
             self.window_size = nn_param_set['window_size']
             self.weights = nn_param_set['trained_weights']
 
+        print('loading GEN params')
         with open(gen_param_set_loc) as fp:
             gen_param_set = cPickle.load(fp)
             self.max_words = gen_param_set['max_words']
 
+        print('loading Word2Vec model')
         self.model = models.Word2Vec.load_word2vec_format(
             '../storage/GoogleNews-vectors-negative300.bin',
             binary=True)
+
         self.vectorizer = lambda x: self.model[x] \
             if x in self.model else np.ones(300)*ZERO_EPSILON
+
+        print('training LSH Forest model')
         self.lsh_forest = train_LSHForest(self.model)
 
 

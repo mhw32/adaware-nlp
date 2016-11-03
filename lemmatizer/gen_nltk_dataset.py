@@ -39,7 +39,7 @@ def train_brown_lemmatizer(output_folder):
         window_size=[1,1],
         batch_size=256,
         param_scale=0.01,
-        num_epochs=500,
+        num_epochs=200,
         step_size=0.001)
 
     if output_folder:
