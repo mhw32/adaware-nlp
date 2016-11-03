@@ -146,7 +146,7 @@ class softmax_layer(full_layer):
 def train_cnn(inputs,
               outputs,
               layer_specs,
-              init_weights=None
+              init_weights=None,
               param_scale=0.1,
               step_size=0.001,
               batch_size=256,
