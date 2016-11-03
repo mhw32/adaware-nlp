@@ -26,10 +26,10 @@ def rms(preds, targets):
     return sqrt(mean_squared_error(targets, preds))
 
 
-def make_nn_funs(layer_sizes,
-                 weight_scale=10.0,
-                 noise_scale=0.1,
-                 nonlinearity=np.tanh):
+def build(layer_sizes,
+          weight_scale=10.0,
+          noise_scale=0.1,
+          nonlinearity=np.tanh):
     """These functions implement a standard multi-layer perceptron."""
 
     shapes = list(zip(layer_sizes[:-1], layer_sizes[1:]))
@@ -57,14 +57,14 @@ def make_nn_funs(layer_sizes,
     return num_weights, predictions, logprob
 
 
-def train_nn_regressor(inputs,
-                       outputs,
-                       layer_sizes,  # don't include inputs and outputs
-                       batch_size=256,
-                       init_weights=None,
-                       param_scale=0.1,
-                       num_epochs=5,
-                       step_size=0.001):
+def train_mlp(inputs,
+              outputs,
+              layer_sizes,  # don't include inputs and outputs
+              batch_size=256,
+              init_weights=None,
+              param_scale=0.1,
+              num_epochs=5,
+              step_size=0.001):
 
     # split data (again) into a training and a validation set
     (tr_inputs, va_inputs), (tr_outputs, va_outputs) = util.split_data(
@@ -79,7 +79,7 @@ def train_nn_regressor(inputs,
     layer_sizes = [num_input_dims] + layer_sizes + [num_output_dims]
 
     num_weights, predictions, logprob = \
-        make_nn_funs(layer_sizes=layer_sizes, nonlinearity=rbf)
+        build(layer_sizes=layer_sizes, nonlinearity=rbf)
 
     def batch_indices(iter):
         idx = iter % num_batches

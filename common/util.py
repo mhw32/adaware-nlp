@@ -88,6 +88,7 @@ def split_data(in_data, out_data=None, frac=0.80):
 
     return (tr_in_data, te_in_data)
 
+
 def grouper(iterable, n): # Might combine this with batch_index_generator
     it = iter(iterable)
     while True:
@@ -95,6 +96,7 @@ def grouper(iterable, n): # Might combine this with batch_index_generator
        if not chunk:
            return
        yield chunk
+
 
 def train_LSHForest(model, batch_size=1000, n_candidates=50, n_estimators=10):
     ''' Given a large wordvec or GloVe model, we need to efficiently be able
@@ -120,6 +122,7 @@ def train_LSHForest(model, batch_size=1000, n_candidates=50, n_estimators=10):
         lshf.partial_fit(array)
     return lshf
 
+
 def devectorize(vectors, lsh_forest, neighbors=1):
     ''' Returns an (n x neighbors) array of words, where row i contains the
         nearest neighbor words for the word vector i
@@ -127,4 +130,3 @@ def devectorize(vectors, lsh_forest, neighbors=1):
     dists, indices = lsh_forest.kneighbors(vectors, n_neighbors=neighbors)
     vec_i2w = np.vectorize(lambda index:model.index2word[index])
     return vec_i2w(indices)
-

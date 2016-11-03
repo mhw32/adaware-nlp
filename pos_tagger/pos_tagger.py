@@ -46,7 +46,7 @@ def train_pos_tagger_blstm(
         represents the number of words in sentence i
     '''
     if one_hot is None:
-        with open('storage/one_hot_list', 'rb') as f:
+        with open('storage/pos_tagger/one_hot_list', 'rb') as f:
             one_hot = cPickle.load(f)
 
     X_train = np.swapaxes(X_train, 0, 1)
@@ -83,7 +83,7 @@ def train_pos_tagger_blstm(
 def text_to_vector(sentence_list, MAX_SENTENCE=78, model=None):
     if model is None:
         model = models.Word2Vec.load_word2vec_format(
-            '../storage/GoogleNews-vectors-negative300.bin', binary=True)
+            '../storage/pos_tagger/GoogleNews-vectors-negative300.bin', binary=True)
     X = np.zeros((MAX_SENTENCE, len(sentence_list), 300))
     capitals = np.zeros((MAX_SENTENCE, len(sentence_list), 3))
     vectorize = lambda x: model[x] if x in model else np.zeros(300)
@@ -112,7 +112,7 @@ def cap_vector(word):
 
 def probability_to_pos(logprobs, mask):
     logprobs = np.array(logprobs)
-    with open('../storage/one_hot_list', 'rb') as f:
+    with open('../storage/pos_tagger/one_hot_list', 'rb') as f:
         one_hot = pickle.load(f)
     sentences = []
     for i in range(logprobs.shape[1]):
@@ -125,7 +125,7 @@ def probability_to_pos(logprobs, mask):
 
 def predict_from_sentences(sentence_list, params=None):
     if params is None:
-        params = dict(np.load('storage/pos_trained_weights.npz'))
+        params = dict(np.load('storage/pos_tagger/pos_trained_weights.npz'))
 
     X, capitals, mask = text_to_vector(sentence_list)
     logprobs = np.array(blstm_predict(params, X, capitals))
