@@ -31,6 +31,7 @@ from nltk.stem import WordNetLemmatizer
 
 ZERO_EPSILON=1e-7
 
+
 def treebank_to_simple(penn_tag, default=None):
     morphy_tag = {'NN':wordnet.NOUN,
                   'JJ':wordnet.ADJ,
@@ -129,6 +130,7 @@ def train_lemmatizer(
     out_set,
     count_set,
     window_size=[1,1],
+    include_identity=True,
     batch_size=256,
     param_scale=0.01,
     num_epochs=250,
@@ -171,7 +173,8 @@ def train_lemmatizer(
     for sent_i in range(obs_set.shape[0]):
         obs_slice = obs_set[sent_i, :, :][:count_set[sent_i]]
         out_slice = out_set[sent_i, :, :][:count_set[sent_i]]
-        obs_window = window_featurizer(obs_slice, size=window_size)
+        obs_window = window_featurizer(obs_slice, size=window_size,
+                                                  epsilon=ZERO_EPSILON)
 
         obs_lst.append(obs_window)
         out_lst.append(out_slice)
@@ -179,6 +182,17 @@ def train_lemmatizer(
     # flatten vectors
     inputs = np.concatenate(obs_lst)
     outputs = np.concatenate(out_lst)
+
+    if not include_identity:
+        inputs_dim = inputs.shape[-1]
+        outputs_dim = outputs.shape[-1]
+        mid_idx = int(np.ceil(outputs_dim / float(inputs_dim)) + 1)
+        axis_sums = np.sum(
+            inputs[:,outputs_dim*(mid_idx-1):outputs_dim*mid_idx]-outputs, axis=1)
+        axis_slice = np.where(axis_sums != 0)
+        if axis_slice[0].size > 0:
+           inputs = inputs[axis_slice[0], :]
+           outputs = outputs[axis_slice[0], :]
 
     pred_fun, loglike_fun, trained_weights = \
         thin_cosine_mlp.train_mlp(inputs,

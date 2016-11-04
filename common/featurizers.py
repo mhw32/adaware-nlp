@@ -5,7 +5,7 @@
 
 import numpy as np
 
-def window_featurizer(X, y=None, pad=True, size=[1,1]):
+def window_featurizer(X, y=None, pad=True, size=[1,1], epsilon=1e-7):
     ''' Given some time series of data, it might be a good idea
         to include some temporal information by adding neighboring
         vectors.
@@ -32,8 +32,8 @@ def window_featurizer(X, y=None, pad=True, size=[1,1]):
 
     if pad:
         # prepend + postpend with 0's
-        X = np.vstack((np.ones((size[0], X.shape[1]))*ZERO_EPSILON,
-            X, np.ones((size[1], X.shape[1]))*ZERO_EPSILON))
+        X = np.vstack((np.ones((size[0], X.shape[1]))*epsilon,
+            X, np.ones((size[1], X.shape[1]))*epsilon))
 
     for i in range(size[0],X.shape[0]-size[1]):
         for j,k in enumerate(range(i-size[0],i+size[1]+1)):
