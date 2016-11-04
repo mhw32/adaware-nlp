@@ -19,15 +19,21 @@ https://arxiv.org/pdf/cmp-lg/9503019.pdf
 from __future__ import absolute_import, division
 from __future__ import print_function
 
+import sys
 import numpy as np
 import nltk
 import cPickle
-import nn
 
 from constants import *
 import create_toy_data as ctd
 from metrics import get_auc
 from collections import defaultdict
+
+sys.path.append('../common')
+from util import split_data
+
+sys.path.append('../models')
+import nn
 
 
 def get_loc_in_array(value, array):
@@ -491,7 +497,7 @@ def create_features_labels(save_to_disk=False):
     darrays, labels = make_grams(
         darrays, labels, 3, target_tag=EOS_PUNC)
 
-    (tr_inputs, te_inputs), (tr_outputs, te_outputs) = ctd.split_data(
+    (tr_inputs, te_inputs), (tr_outputs, te_outputs) = split_data(
         darrays, out_data=labels, frac=0.80)
 
     if save_to_disk:
