@@ -114,6 +114,16 @@ def merge_main_context(W,
     return W[:vocab_size]
 
 
+def get_vector(word, W, vocab):
+    """ Given a word, return its vector repr """
+
+    assert len(W) == len(vocab)
+    if word in vocab:
+        return W[vocab[word][0]]
+    else:
+        return np.zeros(W.shape[-1])
+
+
 def most_similar(W, vocab, id2word, word, n=15):
     """ Given a word, find the n most similar words.
 
