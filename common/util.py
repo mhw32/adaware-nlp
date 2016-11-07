@@ -30,8 +30,19 @@ def batch_index_generator(n, batch_size=50):
         i += batch_size
 
 
+def identity(x): return x
+
+
+def tanh(x):
+    return np.tanh(x)
+
+
 def sigmoid(x):
     return 0.5*(np.tanh(x) + 1.0)
+
+
+def rbf(x):
+    return np.exp(-x**2)
 
 
 def relu(x):

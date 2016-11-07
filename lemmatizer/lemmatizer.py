@@ -89,7 +89,7 @@ def gen_dataset(sentences,
 
     num_sentences = len(sentences)
     model = models.Word2Vec.load_word2vec_format(
-        '../storage/GoogleNews-vectors-negative300.bin',
+        '../storage/pos_tagger/GoogleNews-vectors-negative300.bin',
         binary=True)
     vectorizer = lambda x: model[x] if x in model else np.ones(300)*ZERO_EPSILON
     lemmatizer = WordNetLemmatizer().lemmatize
@@ -232,7 +232,7 @@ class NeuralLemmatizer(object):
 
         print('loading Word2Vec model')
         self.model = models.Word2Vec.load_word2vec_format(
-            '../storage/GoogleNews-vectors-negative300.bin',
+            '../storage/pos_tagger/GoogleNews-vectors-negative300.bin',
             binary=True)
 
         self.vectorizer = lambda x: self.model[x] \
