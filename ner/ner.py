@@ -238,7 +238,7 @@ def train_ner(
                    cnn.maxpool_layer((2, 2)),
                    cnn.conv_layer((1, 21), 8),
                    cnn.maxpool_layer((1, 2)),
-                   cnn.full_layer(256),
+                   cnn.tanh_layer(256),
                    cnn.softmax_layer(9)]
 
     pred_fun, loglike_fun, trained_weights = \

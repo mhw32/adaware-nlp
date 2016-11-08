@@ -76,16 +76,16 @@ class conv_layer(object):
         self.num_filters = num_filters
 
     def forward_pass(self, inputs, param_vector):
-        # Input dimensions:  [data, color_in, y, x]
-        # Params dimensions: [color_in, color_out, y, x]
-        # Output dimensions: [data, color_out, y, x]
+        # Input dimensions:  [data, 1, y, x]
+        # Params dimensions: [1, filter, y, x]
+        # Output dimensions: [data, filter, y, x]
         params = self.parser.get(param_vector, 'params')
         biases = self.parser.get(param_vector, 'biases')
         conv = convolve(inputs, params, axes=([2, 3], [2, 3]), dot_axes = ([1], [0]), mode='valid')
         return conv + biases
 
     def build_weights_dict(self, input_shape):
-        # Input shape : [color, y, x] (don't need to know number of data yet)
+        # Input shape : [1, y, x] (don't need to know number of data yet)
         self.parser = WeightsParser()
         self.parser.add_weights('params', (input_shape[0], self.num_filters)
                                           + self.kernel_shape)
@@ -103,7 +103,7 @@ class maxpool_layer(object):
         self.pool_shape = pool_shape
 
     def build_weights_dict(self, input_shape):
-        # input_shape dimensions: [color, y, x] (don't need to know number of data yet)
+        # input_shape dimensions: [filter, y, x] (don't need to know number of data yet)
         output_shape = list(input_shape)
         for i in [0, 1]:
             assert input_shape[i + 1] % self.pool_shape[i] == 0, \
@@ -158,7 +158,7 @@ def train_cnn(inputs,
               init_weights=None,
               param_scale=0.1,
               step_size=0.001,
-              batch_size=256,
+              batch_size=128,
               num_epochs=50,
               L2_reg=1.0):
     ''' wrapper function to train the convnet '''
