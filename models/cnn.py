@@ -5,6 +5,13 @@
 from __future__ import absolute_import
 from __future__ import print_function
 
+import pdb
+import sys
+sys.path.append('../common')
+sys.path.append('../models')
+from optimizers import adam
+import util
+
 import autograd.numpy as np
 import autograd.numpy.random as npr
 from autograd.scipy.signal import convolve
@@ -57,7 +64,7 @@ def build(input_shape, layer_specs, L2_reg):
         return - log_prior - log_lik
 
     def frac_err(W_vect, X, T):
-        return np.mean(np.argmax(T, axis=1) != np.argmax(pred_fun(W_vect, X), axis=1))
+        return np.mean(np.argmax(T, axis=1) != np.argmax(predictions(W_vect, X), axis=1))
 
     return parser.N, predictions, loss, frac_err
 
@@ -78,11 +85,12 @@ class conv_layer(object):
 
     def build_weights_dict(self, input_shape):
         # Input shape : [color, y, x] (don't need to know number of data yet)
+        data_shape, input_shape = input_shape[0], input_shape[1:]
         self.parser = WeightsParser()
         self.parser.add_weights('params', (input_shape[0], self.num_filters)
                                           + self.kernel_shape)
         self.parser.add_weights('biases', (1, self.num_filters, 1, 1))
-        output_shape = (self.num_filters,) + \
+        output_shape = (data_shape, self.num_filters,) + \
                        self.conv_output_shape(input_shape[1:], self.kernel_shape)
         return self.parser.N, output_shape
 
@@ -95,12 +103,15 @@ class maxpool_layer(object):
         self.pool_shape = pool_shape
 
     def build_weights_dict(self, input_shape):
-        # input_shape dimensions: [color, y, x]
+        # input_shape dimensions: [color, y, x] (don't need to know number of data yet)
+        data_shape, input_shape = input_shape[0], input_shape[1:]
         output_shape = list(input_shape)
         for i in [0, 1]:
             assert input_shape[i + 1] % self.pool_shape[i] == 0, \
-                "maxpool shape should tile input exactly"
+                "maxpool shape ({}) should tile input ({}) exactly".format(
+                    self.pool_shape[i], input_shape[i + 1])
             output_shape[i + 1] = input_shape[i + 1] / self.pool_shape[i]
+        output_shape = [data_shape] + output_shape
         return 0, output_shape
 
     def forward_pass(self, inputs, param_vector):
@@ -174,15 +185,15 @@ def train_cnn(inputs,
         idx = batch_indices(iter)
         return loss_fun(weights, tr_inputs[idx], tr_outputs[idx])
 
-    loss_grad = grad(loss_fun)
+    loss_grad = grad(batch_loss)
 
     # init weights
     if init_weights is None:
         rs = npr.RandomState()
         init_weights = rs.randn(num_weights) * param_scale
 
-    print("    Epoch      |    Train err  |   Test error  ")
-    def print_perf(epoch, W):
+    print("    Epoch      |    Train err  |   Validation error  ")
+    def print_perf(weights, epoch, gradients):
         va_perf = frac_err(weights, va_inputs, va_outputs)
         tr_perf = frac_err(weights, tr_inputs, tr_outputs)
         print("{0:15}|{1:15}|{2:15}".format(epoch, tr_perf, va_perf))

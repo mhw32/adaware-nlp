@@ -24,6 +24,7 @@
 '''
 
 import sys
+sys.path.append('../common')
 import util
 import cPickle
 import numpy as np
@@ -31,6 +32,7 @@ import numpy as np
 sys.path.append('../common')
 sys.path.append('../models')
 
+import featurizers
 from gensim import models
 import cnn
 
@@ -134,7 +136,7 @@ def gen_dataset(sentences,
 
     num_sentences = len(sentences)
     model = models.Word2Vec.load_word2vec_format(
-        '../storage/GoogleNews-vectors-negative300.bin',
+        '../storage/pos_tagger/GoogleNews-vectors-negative300.bin',
         binary=True)
     vectorizer = lambda x: model[x] if x in model else np.zeros(300)
     encoder = one_hot_encoding(categories)
@@ -165,7 +167,7 @@ def gen_dataset(sentences,
         K[sent_i] = len(words)  # keep track of num words in sentence
 
     if train_test_split:
-        (X_train, X_test), (I_train, I_test) = split_data(
+        (X_train, X_test), (I_train, I_test) = util.split_data(
             X, out_data=I, frac=0.80)
         y_train, y_test = y[I_train], y[I_test]
         K_train, K_test = K[I_train], K[I_test]
@@ -219,26 +221,28 @@ def train_ner(
 
     # loop through each sentence and window featurize it
     for sent_i in range(obs_set.shape[0]):
-        obs_slice = obs_set[sent_i, :, :][:count_set[sent_i]]
-        out_slice = out_set[sent_i, :, :][:count_set[sent_i]]
-        obs_window = window_featurizer(obs_slice, size=window_size)
+        obs_slice = obs_set[sent_i, :, :][:int(count_set[sent_i])]
+        out_slice = out_set[sent_i, :, :][:int(count_set[sent_i])]
+        obs_window = featurizers.window_featurizer(obs_slice, size=window_size)
+        obs_window = obs_window.reshape(obs_slice.shape[0], sum(window_size)+1, obs_slice.shape[-1])
 
         obs_lst.append(obs_window)
         out_lst.append(out_slice)
 
     # flatten vectors
     inputs = np.concatenate(obs_lst)
+    inputs = np.expand_dims(inputs, axis=1)
     outputs = np.concatenate(out_lst)
 
     layer_specs = [cnn.conv_layer((2, 41), 4),
-                   cnn.maxpool_layer(2, 2),
+                   cnn.maxpool_layer((2, 2)),
                    cnn.conv_layer((1, 21), 8),
-                   cnn.maxpool_layer(2, 1),
+                   cnn.maxpool_layer((1, 2)),
                    cnn.full_layer(256),
-                   cnn.softmax_layer(2)]
+                   cnn.softmax_layer(9)]
 
     pred_fun, loglike_fun, trained_weights = \
-        cnn.train_mlp(inputs,
+        cnn.train_cnn(inputs,
                       outputs,
                       layer_specs,
                       batch_size=batch_size,
