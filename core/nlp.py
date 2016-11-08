@@ -95,7 +95,17 @@ class AdaPOSTagger(object):
 
 
 class AdaNERClassifier(object):
-    return 'Coming Soon! This is not yet available.'
+    def __init__(self, gen_params, nn_params):
+        self.model = NeuralNER(gen_params, nn_params)
+
+    def do(self, sentence):
+        ''' sentence : list, list of tokens '''
+        return self.model.ner(sentence)
+
+    def do_all(self, sentences):
+        ''' sentence : 2D list, list of list of tokens '''
+        for i, sentence in enumerate(sentences):
+            return self.model.ner(sentence)
 
 
 class AdaCoRefClassifier(object)

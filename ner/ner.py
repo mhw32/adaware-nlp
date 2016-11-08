@@ -261,22 +261,18 @@ class NeuralNER(object):
     ''' Dummy class as a wrapper to easy load the weights and use
         them with one call. Must have a trained cnn already. '''
     def __init__(self,
-                 gen_param_set_loc,
-                 nn_param_set_loc):
+                 gen_param_set,
+                 nn_param_set):
 
         print('loading NN params')
-        with open(nn_param_set_loc) as fp:
-            nn_param_set = dill.load(fp)
-            self.pred_fun = nn_param_set['pred_fun']
-            self.loglike_fun = nn_param_set['loglike_fun']
-            self.window_size = nn_param_set['window_size']
-            self.weights = nn_param_set['trained_weights']
+        self.pred_fun = nn_param_set['pred_fun']
+        self.loglike_fun = nn_param_set['loglike_fun']
+        self.window_size = nn_param_set['window_size']
+        self.weights = nn_param_set['trained_weights']
 
         print('loading GEN params')
-        with open(gen_param_set_loc) as fp:
-            gen_param_set = cPickle.load(fp)
-            self.max_words = gen_param_set['max_words']
-            self.encoder = gen_param_set['encoder']
+        self.max_words = gen_param_set['max_words']
+        self.encoder = gen_param_set['encoder']
 
         print('loading Word2Vec model')
         self.model = models.Word2Vec.load_word2vec_format(
@@ -292,5 +288,5 @@ class NeuralNER(object):
                              encoder=self.encoder,
                              max_words=self.max_words)
         X = X[:len(sentence)]
-        X = window_featurizer(X, size=self.window_size)
+        X = featurizers.window_featurizer(X, size=self.window_size)
         y = self.pred_fun(self.weights, X)
