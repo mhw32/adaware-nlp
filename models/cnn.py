@@ -44,6 +44,7 @@ def logsumexp(X, axis, keepdims=False):
 def build(input_shape, layer_specs, L2_reg):
     parser = WeightsParser()
     cur_shape = input_shape
+    pdb.set_trace()
 
     for layer in layer_specs:
         N_weights, cur_shape = layer.build_weights_dict(cur_shape)
@@ -85,12 +86,11 @@ class conv_layer(object):
 
     def build_weights_dict(self, input_shape):
         # Input shape : [color, y, x] (don't need to know number of data yet)
-        data_shape, input_shape = input_shape[0], input_shape[1:]
         self.parser = WeightsParser()
         self.parser.add_weights('params', (input_shape[0], self.num_filters)
                                           + self.kernel_shape)
         self.parser.add_weights('biases', (1, self.num_filters, 1, 1))
-        output_shape = (data_shape, self.num_filters,) + \
+        output_shape = (self.num_filters,) + \
                        self.conv_output_shape(input_shape[1:], self.kernel_shape)
         return self.parser.N, output_shape
 
@@ -104,14 +104,12 @@ class maxpool_layer(object):
 
     def build_weights_dict(self, input_shape):
         # input_shape dimensions: [color, y, x] (don't need to know number of data yet)
-        data_shape, input_shape = input_shape[0], input_shape[1:]
         output_shape = list(input_shape)
         for i in [0, 1]:
             assert input_shape[i + 1] % self.pool_shape[i] == 0, \
                 "maxpool shape ({}) should tile input ({}) exactly".format(
                     self.pool_shape[i], input_shape[i + 1])
             output_shape[i + 1] = input_shape[i + 1] / self.pool_shape[i]
-        output_shape = [data_shape] + output_shape
         return 0, output_shape
 
     def forward_pass(self, inputs, param_vector):
@@ -179,7 +177,7 @@ def train_cnn(inputs,
         return slice(idx * batch_size, (idx+1) * batch_size)
 
     # build CNN
-    num_weights, pred_fun, loss_fun, frac_err = build(input_shape, layer_specs, L2_reg)
+    num_weights, pred_fun, loss_fun, frac_err = build(input_shape[1:], layer_specs, L2_reg)
 
     def batch_loss(weights, iter):
         idx = batch_indices(iter)
