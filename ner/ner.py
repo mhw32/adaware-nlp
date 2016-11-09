@@ -53,11 +53,6 @@ def read_wordvec_from_file(in_file, out_file):
         cPickle.dump(model, fp)
 
 
-def load_google_wordvec():
-    path = '../storage/GoogleNews-vectors-negative300.bin'
-    return models.Word2Vec.load_word2vec_format(path, binary=True)
-
-
 def read_dataset_from_file(file):
     with open(file) as fp:
         raw_data = fp.read()

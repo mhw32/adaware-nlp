@@ -44,7 +44,6 @@ def logsumexp(X, axis, keepdims=False):
 def build(input_shape, layer_specs, L2_reg):
     parser = WeightsParser()
     cur_shape = input_shape
-    pdb.set_trace()
 
     for layer in layer_specs:
         N_weights, cur_shape = layer.build_weights_dict(cur_shape)
@@ -190,11 +189,13 @@ def train_cnn(inputs,
         rs = npr.RandomState()
         init_weights = rs.randn(num_weights) * param_scale
 
-    print("    Epoch      |    Train err  |   Validation error  ")
+    print("    Epoch      |   Train loss  |   Train err   | Validation loss  | Validation error  ")
     def print_perf(weights, epoch, gradients):
         va_perf = frac_err(weights, va_inputs, va_outputs)
         tr_perf = frac_err(weights, tr_inputs, tr_outputs)
-        print("{0:15}|{1:15}|{2:15}".format(epoch, tr_perf, va_perf))
+        va_loss = loss_fun(weights, va_inputs, va_outputs)
+        tr_loss = loss_fun(weights, tr_inputs, tr_outputs)
+        print("{0:15}|{1:15}|{2:15}|{3:18}|{4:15}".format(epoch, tr_loss, tr_perf, va_loss, va_perf))
 
     # optimize parameters
     trained_weights = adam(loss_grad,
