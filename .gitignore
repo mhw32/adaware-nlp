@@ -88,7 +88,11 @@ ENV/
 # Rope project settings
 .ropeproject
 
-# Project specific 
+# Project specific
 storage/*
 !storage/.gitkeep
 !storage/data_nn_disambiguator/.gitkeep
+datasets/*
+data_ocean/_passwords/
+**_example**
+
