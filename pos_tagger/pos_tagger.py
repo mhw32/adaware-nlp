@@ -90,7 +90,7 @@ def text_to_vector(sentence_list, MAX_SENTENCE=78, model=None):
     mask = []
     for i, sentence in enumerate(sentence_list):
         for j, word in enumerate(sentence):
-            if j > 77:
+            if j == MAX_SENTENCE:
                 j -= 1
                 break
             X[j][i] = vectorize(word)
