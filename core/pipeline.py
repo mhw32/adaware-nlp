@@ -46,7 +46,7 @@ class AdaSentencePipeline(object):
         with open('../storage/word_embedding/glove_vocab_300d.pkl') as fp:
             embedder_vocab = cPickle.load(fp)
 
-        pos_tagger_weights = np.load('../storage/pos_tagger/trained_weights.npy')
+        pos_tagger_weights = dict(np.load('../storage/pos_tagger/trained_weights.npy'))
 
         with open('../storage/ner/gen_params_set.pkl') as fp:
             ner_gen_params = cPickle.load(fp)
