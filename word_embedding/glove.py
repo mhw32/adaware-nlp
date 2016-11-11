@@ -114,6 +114,16 @@ def merge_main_context(W,
     return W[:vocab_size]
 
 
+def get_vector(word, W, vocab):
+    """ Given a word, return its vector repr """
+
+    assert len(W) == len(vocab)
+    if word in vocab:
+        return W[vocab[word][0]]
+    else:
+        return np.zeros(W.shape[-1])
+
+
 def most_similar(W, vocab, id2word, word, n=15):
     """ Given a word, find the n most similar words.
 
@@ -364,6 +374,21 @@ def update_glove(vocab, data, learning_rate=0.05, x_max=100, alpha=0.75):
     return global_cost
 
 
-def save_glove(W, path):
-    with open(path, 'wb') as f:
-        pickle.dump(W, f, protocol=2)
+def _load_pretrained_glove_from_file(path):
+    with open(path) as fp:
+        data = fp.read().split('\n')
+
+    vocab = {}
+    weights = []
+    for i, line in enumerate(data):
+        if i % 1000 == 0:
+            print('{} tokens processed.'.format(i))
+        line = line.split(' ')
+        if len(line) > 0:
+            word = line[0]
+            data = [float(j) for j in line[1:]]
+            vocab[line[0]] = (i, None)
+            weights.append(data)
+
+    weights = np.array(weights)
+    return weights, vocab
