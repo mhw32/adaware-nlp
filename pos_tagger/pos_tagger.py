@@ -90,7 +90,7 @@ def text_to_vector(sentence_list, MAX_SENTENCE=78, model=None):
     mask = []
     for i, sentence in enumerate(sentence_list):
         for j, word in enumerate(sentence):
-            if j > 77:
+            if j == MAX_SENTENCE:
                 j -= 1
                 break
             X[j][i] = vectorize(word)
@@ -123,10 +123,10 @@ def probability_to_pos(logprobs, mask):
     return sentences
 
 
-def predict_from_sentences(sentence_list, params=None):
+def predict_from_sentences(sentence_list, params=None, model=None):
     if params is None:
         params = dict(np.load('storage/pos_tagger/pos_trained_weights.npz'))
 
-    X, capitals, mask = text_to_vector(sentence_list)
+    X, capitals, mask = text_to_vector(sentence_list, model=model)
     logprobs = np.array(blstm_predict(params, X, capitals))
     return probability_to_pos(logprobs, mask)

@@ -87,11 +87,11 @@ class AdaPOSTagger(object):
 
     def do(self, sentence):
         ''' sentence : list, list of tokens '''
-        return pos_tagger.predict_from_sentences([sentence])
+        return pos_tagger.predict_from_sentences([sentence], params=self.weights, model=self.word2vec)
 
     def do_all(self, sentences):
         ''' sentence : 2D list, list of list of tokens '''
-        return pos_tagger.predict_from_sentences(sentences)
+        return pos_tagger.predict_from_sentences(sentences, params=self.weights, model=self.word2vec)
 
 
 class AdaNERClassifier(object):
