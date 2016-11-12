@@ -35,6 +35,20 @@ class WeightsParser(object):
         return np.reshape(vect[idxs], shape)
 
 
+def cms(preds, targets):
+    return np.clip(np.sum(mat_cosine_dist(preds, targets)) / targets.shape[0], 1e-5, 1)
+
+
+def mat_cosine_dist(X, Y):
+    prod = np.diagonal(np.dot(X, Y.T),
+        offset=0, axis1=-1, axis2=-2)
+    len1 = np.sqrt(np.diagonal(np.dot(X, X.T),
+        offset=0, axis1=-1, axis2=-2))
+    len2 = np.sqrt(np.diagonal(np.dot(Y, Y.T),
+        offset=0, axis1=-1, axis2=-2))
+    return np.divide(np.divide(prod, len1), len2)
+
+
 def logsumexp(X, axis, keepdims=False):
     ''' normalizing in log space hack '''
     max_X = np.max(X)
@@ -45,6 +59,7 @@ def build(input_shape, layer_specs, L2_reg):
     parser = WeightsParser()
     cur_shape = input_shape
 
+    # pdb.set_trace()
     for layer in layer_specs:
         N_weights, cur_shape = layer.build_weights_dict(cur_shape)
         parser.add_weights(layer, (N_weights,))
@@ -58,13 +73,19 @@ def build(input_shape, layer_specs, L2_reg):
             cur_units = layer.forward_pass(cur_units, cur_weights)
         return cur_units
 
+    # def loss(W_vect, X, T):
+    #     log_prior = -L2_reg * np.dot(W_vect, W_vect)
+    #     log_lik = np.sum(predictions(W_vect, X) * T)
+    #     return - log_prior - log_lik
+
     def loss(W_vect, X, T):
         log_prior = -L2_reg * np.dot(W_vect, W_vect)
-        log_lik = np.sum(predictions(W_vect, X) * T)
+        P = predictions(W_vect, X)
+        log_lik = np.log(cms(P, T))
         return - log_prior - log_lik
 
     def frac_err(W_vect, X, T):
-        return np.mean(np.argmax(T, axis=1) != np.argmax(predictions(W_vect, X), axis=1))
+        return cms(predictions(W_vect, X), T)
 
     return parser.N, predictions, loss, frac_err
 
@@ -146,20 +167,40 @@ class tanh_layer(full_layer):
         return np.tanh(x)
 
 
+class sigmoid_layer(full_layer):
+    def nonlinearity(self, x):
+        return 0.5 * (np.tanh(x) + 1)
+
+
+class rbf_layer(full_layer):
+    def nonlinearity(self, x):
+        return np.exp(-x**2)
+
+
+class relu_layer(full_layer):
+    def nonlinearity(self, x):
+        return np.maximum(x, 0.0)
+
+
 class softmax_layer(full_layer):
     def nonlinearity(self, x):
         return x - logsumexp(x, axis=1, keepdims=True)
 
 
-def train_cnn(inputs,
-              outputs,
-              layer_specs,
-              init_weights=None,
-              param_scale=0.1,
-              step_size=0.001,
-              batch_size=128,
-              num_epochs=50,
-              L2_reg=1.0):
+class identity_layer(full_layer):
+    def nonlinearity(self, x):
+        return x
+
+
+def train_cnn_mlp(inputs,
+                  outputs,
+                  layer_specs,
+                  init_weights=None,
+                  param_scale=0.1,
+                  step_size=0.001,
+                  batch_size=128,
+                  num_epochs=50,
+                  L2_reg=1.0):
     ''' wrapper function to train the convnet '''
 
     (tr_inputs, va_inputs), (tr_outputs, va_outputs) = util.split_data(
@@ -188,6 +229,7 @@ def train_cnn(inputs,
     if init_weights is None:
         rs = npr.RandomState()
         init_weights = rs.randn(num_weights) * param_scale
+
 
     print("    Epoch      |   Train loss  |   Train err   | Validation loss  | Validation error  ")
     def print_perf(weights, epoch, gradients):

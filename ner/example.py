@@ -2,6 +2,7 @@
 import numpy as np
 import cPickle
 import ner
+import dill
 
 obs_set = np.load('../storage/ner/X_train.npy')
 out_set = np.load('../storage/ner/y_train.npy')
@@ -16,9 +17,9 @@ nn_param_dict = ner.train_ner(obs_set,
                               window_size=[1,1],
                               batch_size=128,
                               param_scale=0.01,
-                              num_epochs=2000,
+                              num_epochs=2500,
                               step_size=0.001,
                               l2_lambda=0)
 
-with open('../storage/ner/nn_params_set.pkl', 'w') as fp:
-    cPickle.dump(nn_param_dict, fp)
+with open('../storage/ner/nn_params_set.dill', 'w') as fp:
+    dill.dump(nn_param_dict, fp)
