@@ -5,6 +5,7 @@ import numpy as np
 from nltk.corpus import brown
 from lemmatizer import gen_dataset, train_lemmatizer, NeuralLemmatizer
 
+
 def gen_brown_dataset(output_folder, num=None):
     sentences = brown.sents()
 
@@ -37,10 +38,12 @@ def train_brown_lemmatizer(output_folder):
         out_set,
         count_set,
         window_size=[1,1],
+        include_identity=False,
         batch_size=256,
         param_scale=0.01,
         num_epochs=200,
-        step_size=0.001)
+        step_size=0.001,
+        l2_lambda=0.1)
 
     if output_folder:
         with open(os.path.join(output_folder, 'nn_param_dict.pkl'), 'w') as f:

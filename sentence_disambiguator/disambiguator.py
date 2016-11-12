@@ -412,7 +412,7 @@ def safe_index(A, s, e, pad=False):
     return A[s:e]
 
 
-def make_grams(darrays, labels, num_grams, target_tag=EOS_PUNC, tag_order=None):
+def make_grams(darrays, num_grams, labels=None, target_tag=EOS_PUNC, tag_order=None):
     ''' Given darrays, only take the ones that have a certain
         label. Then take k/2 neighbors from either side.
 
@@ -455,7 +455,8 @@ def make_grams(darrays, labels, num_grams, target_tag=EOS_PUNC, tag_order=None):
     eos_idx = np.where(darrays[:,target_idx] > 0)[0]
 
     new_darrays = np.zeros((eos_idx.shape[0],darrays.shape[1]*(2*num_grams + 1)))
-    new_labels = np.zeros((eos_idx.shape[0], labels.shape[1]))
+    if not label is None:
+        new_labels = np.zeros((eos_idx.shape[0], labels.shape[1]))
 
     for i, idx in enumerate(eos_idx):
         if i % 5000 == 0:
@@ -465,9 +466,12 @@ def make_grams(darrays, labels, num_grams, target_tag=EOS_PUNC, tag_order=None):
         sliced_darrays = safe_index(
             darrays, idx-num_grams, idx+num_grams+1, pad=True).flatten()
         new_darrays[i, :] = sliced_darrays
-        new_labels[i, :] = labels[idx, :]
+        if not label is None:
+            new_labels[i, :] = labels[idx, :]
 
-    return (new_darrays, new_labels)
+    if not label is None:
+        return (new_darrays, new_labels)
+    return new_darrays
 
 
 def create_features_labels(save_to_disk=False):
@@ -495,7 +499,7 @@ def create_features_labels(save_to_disk=False):
 
     # put into grams (give context)
     darrays, labels = make_grams(
-        darrays, labels, 3, target_tag=EOS_PUNC)
+        darrays, 3, labels=labels, target_tag=EOS_PUNC)
 
     (tr_inputs, te_inputs), (tr_outputs, te_outputs) = split_data(
         darrays, out_data=labels, frac=0.80)
@@ -507,6 +511,23 @@ def create_features_labels(save_to_disk=False):
         np.save('storage/data_nn_disambiguator/y_test.npy', te_outputs)
 
     return (tr_inputs, te_inputs), (tr_outputs, te_outputs)
+
+
+def predict_from_tokens(tokens, tag_counts, tag_order):
+    darrays = get_descriptor_arrays(tokens, tag_counts=tag_counts,
+                                            tag_order=tag_order)
+    darrays = make_grams(darrays, 3, target_tag=EOS_PUNC,
+                                     tag_order=self.tag_order)
+    y_pred = nn.neural_net_predict(trained_weights, X_test)
+
+    labels = np.round(np.exp(y_pred), 0)
+    tokens = np.array(tokens)
+    return labels
+
+
+def split_into_sentences(tokens, labels):
+    split_indexes = np.where(labels==1)[0]
+    return np.split(tokens, split_indexes)
 
 
 def main():

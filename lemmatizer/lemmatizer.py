@@ -18,6 +18,7 @@ import cPickle
 
 sys.path.append('../common')
 from util import batch_index_generator, split_data, devectorize, train_LSHForest
+from featurizers import window_featurizer
 
 import thin_cosine_mlp
 
@@ -29,6 +30,7 @@ from nltk.corpus import wordnet
 from nltk.stem import WordNetLemmatizer
 
 ZERO_EPSILON=1e-7
+
 
 def treebank_to_simple(penn_tag, default=None):
     morphy_tag = {'NN':wordnet.NOUN,
@@ -87,7 +89,7 @@ def gen_dataset(sentences,
 
     num_sentences = len(sentences)
     model = models.Word2Vec.load_word2vec_format(
-        '../storage/GoogleNews-vectors-negative300.bin',
+        '../storage/pos_tagger/GoogleNews-vectors-negative300.bin',
         binary=True)
     vectorizer = lambda x: model[x] if x in model else np.ones(300)*ZERO_EPSILON
     lemmatizer = WordNetLemmatizer().lemmatize
@@ -123,50 +125,12 @@ def gen_dataset(sentences,
     return (X, y, K), param_dict
 
 
-def window_featurizer(X, y=None, pad=True, size=[1,1]):
-    ''' Given some time series of data, it might be a good idea
-        to include some temporal information by adding neighboring
-        vectors.
-
-        Args
-        ----
-        X : 2D numpy
-            inputs matrix
-        y : 2D numpy
-            outputs matrix
-        pad : boolean
-              whether not to add zeros to the beginning and ends of
-              each sentence to keep 1st and last word
-        size : list of 2
-               first is number prior, second is number after
-    '''
-
-    if sum(size) <= 0:
-        return (X, y) if not y is None else X
-
-    window_X = np.zeros((X.shape[0], X.shape[1]*(sum(size)+1)))
-    if not y is None:
-        window_y = np.zeros((y.shape[0], y.shape[1]))
-
-    if pad:
-        # prepend + postpend with 0's
-        X = np.vstack((np.ones((size[0], X.shape[1]))*ZERO_EPSILON,
-            X, np.ones((size[1], X.shape[1]))*ZERO_EPSILON))
-
-    for i in range(size[0],X.shape[0]-size[1]):
-        for j,k in enumerate(range(i-size[0],i+size[1]+1)):
-            window_X[i-size[0], j*X.shape[1]:(j+1)*X.shape[1]] = X[k, :]
-        if not y is None:
-            window_y[i-size[0], :] = y[i, :]
-
-    return (window_X, window_y) if not y is None else window_X
-
-
 def train_lemmatizer(
     obs_set,
     out_set,
     count_set,
     window_size=[1,1],
+    include_identity=True,
     batch_size=256,
     param_scale=0.01,
     num_epochs=250,
@@ -209,7 +173,8 @@ def train_lemmatizer(
     for sent_i in range(obs_set.shape[0]):
         obs_slice = obs_set[sent_i, :, :][:count_set[sent_i]]
         out_slice = out_set[sent_i, :, :][:count_set[sent_i]]
-        obs_window = window_featurizer(obs_slice, size=window_size)
+        obs_window = window_featurizer(obs_slice, size=window_size,
+                                                  epsilon=ZERO_EPSILON)
 
         obs_lst.append(obs_window)
         out_lst.append(out_slice)
@@ -217,6 +182,17 @@ def train_lemmatizer(
     # flatten vectors
     inputs = np.concatenate(obs_lst)
     outputs = np.concatenate(out_lst)
+
+    if not include_identity:
+        inputs_dim = inputs.shape[-1]
+        outputs_dim = outputs.shape[-1]
+        mid_idx = int(np.ceil(outputs_dim / float(inputs_dim)) + 1)
+        axis_sums = np.sum(
+            inputs[:,outputs_dim*(mid_idx-1):outputs_dim*mid_idx]-outputs, axis=1)
+        axis_slice = np.where(axis_sums != 0)
+        if axis_slice[0].size > 0:
+           inputs = inputs[axis_slice[0], :]
+           outputs = outputs[axis_slice[0], :]
 
     pred_fun, loglike_fun, trained_weights = \
         thin_cosine_mlp.train_mlp(inputs,
@@ -256,7 +232,7 @@ class NeuralLemmatizer(object):
 
         print('loading Word2Vec model')
         self.model = models.Word2Vec.load_word2vec_format(
-            '../storage/GoogleNews-vectors-negative300.bin',
+            '../storage/pos_tagger/GoogleNews-vectors-negative300.bin',
             binary=True)
 
         self.vectorizer = lambda x: self.model[x] \
