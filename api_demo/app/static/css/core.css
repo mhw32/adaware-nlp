@@ -1,0 +1,45 @@
+.wrapper {
+    padding: 4rem 8rem;
+}
+
+h1, h2, h3, h4, p {
+    font-family: 'Roboto', sans-serif;
+}
+
+.demo-button-section {
+    margin-top: 15px;
+}
+
+.demo-response-section {
+    background-color: #e5e5e5;
+    margin-top: 15px;
+    border-radius: 5px;
+    padding: 15px;
+}
+
+/* Footer CSS */
+
+footer h2 {
+    font-size: 1em;
+    margin: 0;
+    color: #333;
+}
+
+footer {
+    color: gray;
+    font-weight: 400;
+    padding: 2rem 1rem;
+    margin-top: 2rem;
+    font-size: 14px;
+    line-height: 1.4;
+    background-color: #e5e5e5;
+    padding-left: 8rem;
+    padding-right: 8rem;
+}
+
+footer div.copyline {
+    border-top: 1px solid rgba(0,0,0,0.1);
+    padding-top: 1em;
+    margin-top: 2em;
+    font-size: 12px;
+}
