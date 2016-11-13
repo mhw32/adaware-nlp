@@ -16,7 +16,7 @@ class AdaTextPipeline(object):
 
         print('[{}] AdaWordPipeline Execution Path:'.format(str(datetime.now())))
         for step in step_sequence:
-            print('[{}] {}'.format(str(datetime.now())), step)
+            print('[{}] {}'.format(str(datetime.now()), step))
 
         disambiguator_weights = bank.get('disambiguator_weights')
         disambiguator_tag_counts = bank.get('disambiguator_tag_counts')
@@ -29,8 +29,8 @@ class AdaTextPipeline(object):
         self.AdaSentencePipeline = AdaSentencePipeline(bank)
 
     def do(self, text):
-        ada = self.AdaSentencePipeline()
-        sentences = self.disambiguator(text)
+        ada = self.AdaSentencePipeline
+        sentences = self.disambiguator.do(text)
 
         resp = {}
         for i, tokens_lst in enumerate(sentences):
