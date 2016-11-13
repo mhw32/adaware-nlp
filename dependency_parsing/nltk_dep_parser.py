@@ -3,11 +3,11 @@
     parser built into NLTK.
 '''
 
-from nltk.parse.stanford import StanfordNeuralDependencyParser
+from nltk.parse.stanford import StanfordDependencyParser
 
 class DependencyParser(object):
-    def __init__(self):
-        self.model = StanfordNeuralDependencyParser()
+    def __init__(self, path_to_jar, path_to_models_jar):
+        self.model = StanfordDependencyParser(path_to_jar=path_to_jar, path_to_models_jar=path_to_models_jar)
 
     def str_parse(self, sentence):
         ''' sentence is a string '''

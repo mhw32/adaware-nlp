@@ -1,12 +1,16 @@
 from __future__ import absolute_import
 from __future__ import print_function
 
+import sys
+import os
 import autograd.numpy as np
 import autograd.numpy.random as npr
 from autograd.util import flatten
 from autograd import grad
 from autograd.scipy.misc import logsumexp
 
+local_ref = lambda x: os.path.join(os.path.dirname(__file__),  x)
+sys.path.append(local_ref('../common'))
 from util import sigmoid, concat_and_multiply
 
 

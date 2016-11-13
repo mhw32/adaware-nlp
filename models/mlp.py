@@ -3,8 +3,10 @@ from __future__ import print_function
 
 from copy import copy
 import sys
+import os
 
-sys.path.append('../common')
+local_ref = lambda x: os.path.join(os.path.dirname(__file__),  x)
+sys.path.append(local_ref('../common'))
 import util
 
 # load in libraries for NN regressor

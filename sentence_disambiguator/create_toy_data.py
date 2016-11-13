@@ -7,7 +7,8 @@ as a platform for loading them all.
 import os
 import sys
 import nltk
-sys.path.append('../common')
+local_ref = lambda x: os.path.join(os.path.dirname(__file__),  x)
+sys.path.append(local_ref('../common'))
 import util
 import numpy as np
 
@@ -22,7 +23,7 @@ IGNORE_FILES = [
 DEFAULT_TAG = 'UNK'
 
 
-def brown_generator(loc='../storage/sentence_disambiguation/raw_brown'):
+def brown_generator(loc=local_ref('../storage/sentence_disambiguation/raw_brown')):
     ''' Establish a generator that returns the
         contents of a document as a generator.
 

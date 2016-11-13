@@ -3,7 +3,7 @@ import dill
 import cPickle
 import numpy as np
 from nltk.corpus import brown
-from lemmatizer import gen_dataset, train_lemmatizer, NeuralLemmatizer
+from lemmatizer_3 import gen_dataset, train_lemmatizer
 
 
 def gen_brown_dataset(output_folder, num=None):
@@ -37,11 +37,11 @@ def train_brown_lemmatizer(output_folder):
         obs_set,
         out_set,
         count_set,
-        window_size=[1,1],
-        include_identity=False,
-        batch_size=256,
+        window_size=[2,2],
+        positive_samples_only=True,
+        batch_size=128,
         param_scale=0.01,
-        num_epochs=200,
+        num_epochs=4000,
         step_size=0.001,
         l2_lambda=0.1)
 
@@ -49,10 +49,3 @@ def train_brown_lemmatizer(output_folder):
         with open(os.path.join(output_folder, 'nn_param_dict.pkl'), 'w') as f:
             dill.dump(nn_param_set, f)
 
-
-def test_brown_lemmatizer(sentence, output_folder):
-    lemmatizer = NeuralLemmatizer(
-        os.path.join(output_folder, 'gen_param_dict.pkl'),
-        os.path.join(output_folder, 'nn_param_dict.pkl'))
-
-    return lemmatizer.lemmatize(sentence)

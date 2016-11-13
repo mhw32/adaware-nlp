@@ -158,7 +158,7 @@ class TreeBankTokenizer(object):
 
         # We are not using CONTRACTIONS4 since
         # they are also commented out in the SED scripts
-        for reg in self.CONTRACTIONS4:
-            sentence = reg.sub(r' \1 \2 \3 ', sentence)
+        # for reg in self.CONTRACTIONS4:
+        #     sentence = reg.sub(r' \1 \2 \3 ', sentence)
 
         return sentence.split()
