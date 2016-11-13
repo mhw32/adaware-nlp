@@ -4,8 +4,9 @@ from builtins import range
 
 from copy import copy
 import sys
-
-sys.path.append('../common')
+import os
+local_ref = lambda x: os.path.join(os.path.dirname(__file__),  x)
+sys.path.append(local_ref('../common'))
 import util
 
 # load in libraries for NN

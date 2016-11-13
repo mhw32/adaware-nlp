@@ -7,8 +7,10 @@ from __future__ import print_function
 
 import pdb
 import sys
-sys.path.append('../common')
-sys.path.append('../models')
+import os
+local_ref = lambda x: os.path.join(os.path.dirname(__file__),  x)
+sys.path.append(local_ref('../common'))
+sys.path.append(local_ref('../models'))
 from optimizers import adam
 import util
 

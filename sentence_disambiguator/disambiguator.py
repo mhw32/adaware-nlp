@@ -7,19 +7,14 @@ forward neural network.
 
 Created by David Palmer (Edited by us)
 https://arxiv.org/pdf/cmp-lg/9503019.pdf
-
-1. load data
-2. tokenization
-3. part-of-speech lookup
-4. descriptor array construction
-5. classification
-
 '''
 
 from __future__ import absolute_import, division
 from __future__ import print_function
 
+import os
 import sys
+import pdb
 import numpy as np
 import nltk
 import cPickle
@@ -29,10 +24,12 @@ import create_toy_data as ctd
 from metrics import get_auc
 from collections import defaultdict
 
-sys.path.append('../common')
+local_ref = lambda x: os.path.join(os.path.dirname(__file__),  x)
+
+sys.path.append(local_ref('../common'))
 from util import split_data
 
-sys.path.append('../models')
+sys.path.append(local_ref('../models'))
 import nn
 
 
@@ -139,9 +136,9 @@ def init_prior_pos_proba(
                     tag_counts[word][tag_idx] += 1
 
     if save_to_disk:
-        with open('storage/brown_tag_distribution.pkl', 'wb') as f:
+        with open(local_ref('../storage/brown_tag_distribution.pkl'), 'wb') as f:
             cPickle.dump(dict(tag_counts), f)
-        with open('storage/brown_tag_order.pkl', 'wb') as f:
+        with open(local_ref('../storage/brown_tag_order.pkl'), 'wb') as f:
             cPickle.dump(descriptor_array, f)
 
     return tag_counts
@@ -177,11 +174,11 @@ def get_descriptor_arrays(
 
     if tag_counts is None:
         tag_counts = cPickle.load(
-            open('storage/brown_tag_distribution.pkl', 'rb'))
+            open(local_ref('../storage/brown_tag_distribution.pkl'), 'rb'))
 
     if tag_order is None:
         tag_order = cPickle.load(
-            open('storage/brown_tag_order.pkl', 'rb'))
+            open(local_ref('../storage/brown_tag_order.pkl'), 'rb'))
 
     num_tags = tag_order.shape[0]
 
@@ -207,9 +204,9 @@ def get_descriptor_arrays(
     desc_arrays = []
     prev_token = None
     for token_cnt, token in enumerate(tokens):
-        if token_cnt % 10000 == 0:
-            print('----------------------')
-            print('processing: token ({}/{})'.format(token_cnt, len(tokens)))
+        # if token_cnt % 10000 == 0:
+        #     print('----------------------')
+        #     print('processing: token ({}/{})'.format(token_cnt, len(tokens)))
         token_in_lexicon = False
         if token in tag_counts:
             token_in_lexicon = True
@@ -446,7 +443,7 @@ def make_grams(darrays, num_grams, labels=None, target_tag=EOS_PUNC, tag_order=N
 
     if tag_order is None:
         tag_order = cPickle.load(
-            open('storage/brown_tag_order.pkl', 'rb'))
+            open(local_ref('../storage/sentence_disambiguation/brown_tag_order.pkl'), 'rb'))
 
     if not target_tag in tag_order:
         raise ValueError('Target tag not found in tag order.')
@@ -455,23 +452,23 @@ def make_grams(darrays, num_grams, labels=None, target_tag=EOS_PUNC, tag_order=N
     eos_idx = np.where(darrays[:,target_idx] > 0)[0]
 
     new_darrays = np.zeros((eos_idx.shape[0],darrays.shape[1]*(2*num_grams + 1)))
-    if not label is None:
+    if not labels is None:
         new_labels = np.zeros((eos_idx.shape[0], labels.shape[1]))
 
     for i, idx in enumerate(eos_idx):
-        if i % 5000 == 0:
-            print('---------------------')
-            print('finding: end-of-sentence ({}/{})'.format(i, eos_idx.shape[0]))
+        # if i % 5000 == 0:
+        #     print('---------------------')
+        #     print('finding: end-of-sentence ({}/{})'.format(i, eos_idx.shape[0]))
 
         sliced_darrays = safe_index(
             darrays, idx-num_grams, idx+num_grams+1, pad=True).flatten()
         new_darrays[i, :] = sliced_darrays
-        if not label is None:
+        if not labels is None:
             new_labels[i, :] = labels[idx, :]
 
-    if not label is None:
-        return (new_darrays, new_labels)
-    return new_darrays
+    if not labels is None:
+        return (eos_idx, new_darrays, new_labels)
+    return eos_idx, new_darrays
 
 
 def create_features_labels(save_to_disk=False):
@@ -498,36 +495,36 @@ def create_features_labels(save_to_disk=False):
     labels = get_dummies(labels)
 
     # put into grams (give context)
-    darrays, labels = make_grams(
+    didx, darrays, labels = make_grams(
         darrays, 3, labels=labels, target_tag=EOS_PUNC)
 
     (tr_inputs, te_inputs), (tr_outputs, te_outputs) = split_data(
         darrays, out_data=labels, frac=0.80)
 
     if save_to_disk:
-        np.save('storage/data_nn_disambiguator/X_train.npy', tr_inputs)
-        np.save('storage/data_nn_disambiguator/X_test.npy', te_inputs)
-        np.save('storage/data_nn_disambiguator/y_train.npy', tr_outputs)
-        np.save('storage/data_nn_disambiguator/y_test.npy', te_outputs)
+        np.save(local_ref('../storage/sentence_disambiguation/X_train.npy', tr_inputs))
+        np.save(local_ref('../storage/sentence_disambiguation/X_test.npy', te_inputs))
+        np.save(local_ref('../storage/sentence_disambiguation/y_train.npy', tr_outputs))
+        np.save(local_ref('../storage/sentence_disambiguation/y_test.npy', te_outputs))
 
     return (tr_inputs, te_inputs), (tr_outputs, te_outputs)
 
 
-def predict_from_tokens(tokens, tag_counts, tag_order):
+def predict_from_tokens(tokens, trained_weights, tag_counts, tag_order):
     darrays = get_descriptor_arrays(tokens, tag_counts=tag_counts,
                                             tag_order=tag_order)
-    darrays = make_grams(darrays, 3, target_tag=EOS_PUNC,
-                                     tag_order=self.tag_order)
-    y_pred = nn.neural_net_predict(trained_weights, X_test)
-
-    labels = np.round(np.exp(y_pred), 0)
-    tokens = np.array(tokens)
-    return labels
+    didx, darrays = make_grams(darrays, 3, target_tag=EOS_PUNC,
+                                           tag_order=tag_order)
+    y_pred = nn.neural_net_predict(trained_weights, darrays)
+    proba = np.exp(y_pred)
+    return didx, proba
 
 
-def split_into_sentences(tokens, labels):
-    split_indexes = np.where(labels==1)[0]
-    return np.split(tokens, split_indexes)
+def split_into_sentences(tokens, didx, proba):
+    labels = np.argmax(proba, axis=1)
+    split_indexes = didx[np.where(labels==1)[0]]
+    split_arr = np.split(tokens, split_indexes+1)
+    return [list(i) for i in split_arr if len(i) > 0]
 
 
 def main():
@@ -536,10 +533,10 @@ def main():
         2 hidden_units
     '''
 
-    X_train = np.load('storage/data_nn_disambiguator/X_train.npy')
-    X_test = np.load('storage/data_nn_disambiguator/X_test.npy')
-    y_train = np.load('storage/data_nn_disambiguator/y_train.npy')
-    y_test = np.load('storage/data_nn_disambiguator/y_test.npy')
+    X_train = np.load(local_ref('../storage/sentence_disambiguation/X_train.npy'))
+    X_test = np.load(local_ref('../storage/sentence_disambiguation/X_test.npy'))
+    y_train = np.load(local_ref('../storage/sentence_disambiguation/y_train.npy'))
+    y_test = np.load(local_ref('../storage/sentence_disambiguation/y_test.npy'))
 
     trained_weights = nn.train_nn(
         X_train, y_train, [50, 10],
@@ -547,7 +544,7 @@ def main():
         num_epochs=20, step_size=0.001, L2_reg=1.0)
 
     # save the weights
-    np.save('storage/trained_weights.npy', trained_weights)
+    np.save(local_ref('../storage/trained_weights.npy'), trained_weights)
 
     y_pred = nn.neural_net_predict(trained_weights, X_test)
     # don't forget to exp

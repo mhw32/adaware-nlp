@@ -3,12 +3,16 @@ import numpy as np
 import cPickle
 import ner
 import dill
+import sys
+import os
 
-obs_set = np.load('../storage/ner/X_train.npy')
-out_set = np.load('../storage/ner/y_train.npy')
-count_set = np.load('../storage/ner/K_train.npy')
+local_ref = lambda x: os.path.join(os.path.dirname(__file__),  x)
 
-with open('../storage/ner/gen_params_set.pkl') as fp:
+obs_set = np.load(local_ref('../storage/ner/X_train.npy'))
+out_set = np.load(local_ref('../storage/ner/y_train.npy'))
+count_set = np.load(local_ref('../storage/ner/K_train.npy'))
+
+with open(local_ref('../storage/ner/gen_params_set.pkl')) as fp:
     params_dict = cPickle.load(fp)
 
 nn_param_dict = ner.train_ner(obs_set,
@@ -21,5 +25,5 @@ nn_param_dict = ner.train_ner(obs_set,
                               step_size=0.001,
                               l2_lambda=0)
 
-with open('../storage/ner/nn_params_set.dill', 'w') as fp:
+with open(local_ref('../storage/ner/nn_params_set.dill', 'w')) as fp:
     dill.dump(nn_param_dict, fp)

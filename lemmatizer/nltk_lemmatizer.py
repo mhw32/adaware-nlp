@@ -9,4 +9,4 @@ class Lemmatizer(object):
         self.model = WordNetLemmatizer()
 
     def lemmatize(self, word, pos='n'):
-        self.model.lemmatize(word, pos=pos)
+        return self.model.lemmatize(word, pos=pos)

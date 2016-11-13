@@ -2,10 +2,12 @@ from __future__ import absolute_import
 from __future__ import print_function
 
 import sys
+import os
 from builtins import range
 from os.path import dirname, join
 
-sys.path.append('../common')
+local_ref = lambda x: os.path.join(os.path.dirname(__file__),  x)
+sys.path.append(local_ref('../common'))
 import util
 
 import autograd.numpy as np

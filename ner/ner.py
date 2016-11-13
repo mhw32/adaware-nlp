@@ -23,18 +23,19 @@
     news_tagged_data.txt.
 '''
 
+import os
 import sys
-sys.path.append('../common')
+local_ref = lambda x: os.path.join(os.path.dirname(__file__),  x)
+sys.path.append(local_ref('../common'))
+sys.path.append(local_ref('../models'))
+
 import util
 import cPickle
 import numpy as np
-
-sys.path.append('../common')
-sys.path.append('../models')
-
 import featurizers
 from gensim import models
 import cnn
+import pdb
 
 def read_wordvec_from_file(in_file, out_file):
     with open(in_file) as fp:
@@ -131,7 +132,7 @@ def gen_dataset(sentences,
 
     num_sentences = len(sentences)
     model = models.Word2Vec.load_word2vec_format(
-        '../storage/pos_tagger/GoogleNews-vectors-negative300.bin',
+        local_ref('../storage/pos_tagger/GoogleNews-vectors-negative300.bin'),
         binary=True)
     vectorizer = lambda x: model[x] if x in model else np.zeros(300)
     encoder = one_hot_encoding(categories)
@@ -257,25 +258,21 @@ class NeuralNER(object):
         them with one call. Must have a trained cnn already. '''
     def __init__(self,
                  gen_param_set,
-                 nn_param_set):
+                 nn_param_set,
+                 wordvec_embedder):
 
-        print('loading NN params')
         self.pred_fun = nn_param_set['pred_fun']
         self.loglike_fun = nn_param_set['loglike_fun']
         self.window_size = nn_param_set['window_size']
         self.weights = nn_param_set['trained_weights']
 
-        print('loading GEN params')
         self.max_words = gen_param_set['max_words']
         self.encoder = gen_param_set['encoder']
+        self.reverse_encoder = {v: k for k, v in self.encoder.iteritems()}
+        self.embedder = wordvec_embedder
 
-        print('loading Word2Vec model')
-        self.model = models.Word2Vec.load_word2vec_format(
-            '../storage/GoogleNews-vectors-negative300.bin',
-            binary=True)
-
-        self.vectorizer = lambda x: self.model[x] \
-            if x in self.model else np.zeros(300)
+        self.vectorizer = lambda x: self.embedder[x] \
+            if x in self.embedder else np.zeros(300)
 
     def ner(self, sentence):
         X = prepare_sentence(sentence,
@@ -283,5 +280,18 @@ class NeuralNER(object):
                              encoder=self.encoder,
                              max_words=self.max_words)
         X = X[:len(sentence)]
-        X = featurizers.window_featurizer(X, size=self.window_size)
-        y = self.pred_fun(self.weights, X)
+        X_f = featurizers.window_featurizer(X, size=self.window_size)
+        X = X_f.reshape(X.shape[0], sum(self.window_size)+1, X.shape[-1])
+        X = X[:, np.newaxis, ...]
+
+        layer_specs = [cnn.conv_layer((2, 41), 4),
+                       cnn.maxpool_layer((2, 2)),
+                       cnn.conv_layer((1, 21), 8),
+                       cnn.maxpool_layer((1, 2)),
+                       cnn.tanh_layer(256),
+                       cnn.softmax_layer(9)]
+        L2_reg = 0
+        num_weights, pred_fun, loss_fun, frac_err = cnn.build(X.shape[1:], layer_specs, L2_reg)
+        logproba = pred_fun(self.weights, X)
+        return [self.reverse_encoder[i] for i in np.argmax(logproba, axis=1)]
+
