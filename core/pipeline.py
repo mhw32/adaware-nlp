@@ -70,8 +70,8 @@ class AdaSentencePipeline(object):
         tokens = self.tokenizer.do(sentence)
         print('[{}] Running Lemmatizer'.format(str(datetime.now())))
         lemmas = self.lemmatizer.do_all(tokens)
-        print('[{}] Running Embedder'.format(str(datetime.now())))
-        embeddings = [i for i in self.embedder.do_all(tokens)]
+        # print('[{}] Running Embedder'.format(str(datetime.now())))
+        # embeddings = [i for i in self.embedder.do_all(tokens)]
         print('[{}] Running POS Tagger'.format(str(datetime.now())))
         postags = self.pos_tagger.do(tokens)
         print('[{}] Running NER Classifier'.format(str(datetime.now())))
@@ -81,7 +81,7 @@ class AdaSentencePipeline(object):
 
         resp = { 'tokens' : tokens,
                  'lemmas' : lemmas,
-                 'embeddings' : embeddings,
+                 # 'embeddings' : embeddings,
                  'pos_tags' : postags,
                  'ner_tags' : nertags,
                  'dep_tags' : deptags,
@@ -91,8 +91,8 @@ class AdaSentencePipeline(object):
     def _do_tokens(self, tokens):
         print('[{}] Running Lemmatizer'.format(str(datetime.now())))
         lemmas = self.lemmatizer.do_all(tokens)
-        print('[{}] Running Embedder'.format(str(datetime.now())))
-        embeddings = [i for i in self.embedder.do_all(tokens)]
+        # print('[{}] Running Embedder'.format(str(datetime.now())))
+        # embeddings = [i for i in self.embedder.do_all(tokens)]
         print('[{}] Running POS Tagger'.format(str(datetime.now())))
         postags = self.pos_tagger.do(tokens)
         print('[{}] Running NER Classifier'.format(str(datetime.now())))
@@ -102,7 +102,7 @@ class AdaSentencePipeline(object):
 
         resp = { 'tokens' : tokens,
                  'lemmas' : lemmas,
-                 'embeddings' : embeddings,
+                 # 'embeddings' : embeddings,
                  'pos_tags' : postags,
                  'ner_tags' : nertags,
                  'dep_tags' : deptags,
