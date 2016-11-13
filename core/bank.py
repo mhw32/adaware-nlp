@@ -4,6 +4,7 @@ import numpy as np
 import cPickle
 import dill
 from datetime import datetime
+from gensim import models
 
 
 local_ref = lambda x: os.path.join(os.path.dirname(__file__),  x)
@@ -46,7 +47,7 @@ class ParamBank(object):
         with open(local_ref('../storage/ner/gen_params_set.pkl')) as fp:
             ner_gen_params = cPickle.load(fp)
         print('[{}] Loading <ner_nn_params>'.format(str(datetime.now())))
-        with open(local_ref('../storage/ner/nn_params_set.pkl')) as fp:
+        with open(local_ref('../storage/ner/nn_params_set.dill')) as fp:
             ner_nn_params = dill.load(fp)
 
         # stanford dep parser params

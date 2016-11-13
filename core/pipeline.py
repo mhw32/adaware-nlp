@@ -18,14 +18,14 @@ class AdaTextPipeline(object):
         for step in step_sequence:
             print('[{}] {}'.format(str(datetime.now())), step)
 
-        disambiguator_weights = bank.get(['disambiguator_weights'])
-        disambiguator_tag_counts = bank.get(['disambiguator_tag_counts'])
-        disambiguator_tag_order = bank.get(['disambiguator_tag_order'])
+        disambiguator_weights = bank.get('disambiguator_weights')
+        disambiguator_tag_counts = bank.get('disambiguator_tag_counts')
+        disambiguator_tag_order = bank.get('disambiguator_tag_order')
 
         self.disambiguator = nlp.AdaSentenceDisambiguator(
             disambiguator_weights, disambiguator_tag_counts, disambiguator_tag_order)
 
-        self.AdaSentencePipeline = AdaSentencePipeline()
+        self.AdaSentencePipeline = AdaSentencePipeline(bank)
 
     def do(self, text):
         ada = self.AdaSentencePipeline()
@@ -45,22 +45,24 @@ class AdaSentencePipeline(object):
 
         print('[{}] AdaWordPipeline Execution Path:'.format(str(datetime.now())))
         for step in step_sequence:
-            print('[{}] {}'.format(str(datetime.now())), step)
+            print('[{}] {}'.format(str(datetime.now()), step))
 
-        embedder_weights = bank.get(['embedder_weights'])
-        embedder_vocab = bank.get(['embedder_vocab'])
-        pos_tagger_weights = bank.get(['pos_tagger_weights'])
-        wordvec_model = bank.get(['wordvec_model'])
-        ner_gen_params = bank.get(['ner_gen_params'])
-        ner_nn_params = bank.get(['ner_nn_params'])
+        embedder_weights = bank.get('embedder_weights')
+        embedder_vocab = bank.get('embedder_vocab')
+        pos_tagger_weights = bank.get('pos_tagger_weights')
+        wordvec_model = bank.get('wordvec_model')
+        ner_gen_params = bank.get('ner_gen_params')
+        ner_nn_params = bank.get('ner_nn_params')
+        dep_path_to_jar = bank.get('dep_path_to_jar')
+        dep_path_to_models_jar = bank.get('dep_path_to_models_jar')
 
         self.tokenizer = nlp.AdaWordTokenizer()
         self.lemmatizer = nlp.AdaLemmatizer()
         self.embedder = nlp.AdaWordEmbedder(embedder_weights, embedder_vocab)
-        self.pos_tagger = nlp.AdaPosTagger(pos_tagger_weights, wordvec_model)
-        self.ner_classifier = nlp.AdaNerClassifier(ner_gen_params, ner_nn_params)
+        self.pos_tagger = nlp.AdaPOSTagger(pos_tagger_weights, wordvec_model)
+        self.ner_classifier = nlp.AdaNERClassifier(ner_gen_params, ner_nn_params, wordvec_model)
         # self.coref_classifier = nlp.AdaCoRefClassifier()
-        self.dep_parser = nlp.AdaDependencyParser()
+        self.dep_parser = nlp.AdaDependencyParser(dep_path_to_jar, dep_path_to_models_jar)
 
     def do(self, sentence):
         tokens = self.tokenizer.do(sentence)
@@ -85,7 +87,8 @@ class AdaSentencePipeline(object):
         nertags = self.ner_classifier.do(tokens)
         deptags = self.dep_parser.do(tokens)
 
-        resp = { 'lemmas' : lemmas,
+        resp = { 'tokens' : tokens,
+                 'lemmas' : lemmas,
                  'embeddings' : embeddings,
                  'pos_tags' : postags,
                  'ner_tags' : nertags,
@@ -101,8 +104,8 @@ class AdaWordPipeline(object):
         for step in step_sequence:
             print('[{}] {}'.format(str(datetime.now())), step)
 
-        embedder_weights = bank.get(['embedder_weights'])
-        embedder_vocab = bank.get(['embedder_vocab'])
+        embedder_weights = bank.get('embedder_weights')
+        embedder_vocab = bank.get('embedder_vocab')
 
         self.lemmatizer = nlp.AdaLemmatizer()
         self.embedder = nlp.AdaWordEmbedder(embedder_weights, embedder_vocab)
