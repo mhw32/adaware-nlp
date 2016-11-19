@@ -68,12 +68,12 @@ class AdaSentencePipeline(object):
     def do(self, sentence):
         print('[{}] Running Tokenizer'.format(str(datetime.now())))
         tokens = self.tokenizer.do(sentence)
-        print('[{}] Running Lemmatizer'.format(str(datetime.now())))
-        lemmas = self.lemmatizer.do_all(tokens)
-        # print('[{}] Running Embedder'.format(str(datetime.now())))
-        # embeddings = [i for i in self.embedder.do_all(tokens)]
         print('[{}] Running POS Tagger'.format(str(datetime.now())))
         postags = self.pos_tagger.do(tokens)
+        print('[{}] Running Lemmatizer'.format(str(datetime.now())))
+        lemmas = self.lemmatizer.do_all(tokens, postags)
+        # print('[{}] Running Embedder'.format(str(datetime.now())))
+        # embeddings = [i for i in self.embedder.do_all(tokens)]
         print('[{}] Running NER Classifier'.format(str(datetime.now())))
         nertags = self.ner_classifier.do(tokens)
         print('[{}] Running Dependency Parsing'.format(str(datetime.now())))
