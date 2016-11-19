@@ -75,6 +75,7 @@ def adam(grad, init_params, callback=None, num_iters=100,
     return unflatten(x)
 
 
+
 def adagrad(f_grad, x0, xdata, ydata=None, stepsize=1e-2, fudge_factor=1e-6, max_it=1000,
             minibatchsize=None, minibatch_ratio=0.01, callback=None, epsilon=1):
     """ Adaptive Stochastic Gradient Descent (minibatches)

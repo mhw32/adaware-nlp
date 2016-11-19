@@ -52,7 +52,7 @@ def distance_to_onehot(dist): # bin distances
         i = 9
     return np.eye(1,10,i).flatten()
 
-def process_file(f):
+def process_file(f, POSITIVE_XY, NEGATIVE_XY):
     print f
     sentences = []
     curr_sentence = []
@@ -114,7 +114,7 @@ def process_file(f):
             ment.five_left = average([x['word'] for x in curr_sentence[max(0, ment.start - 5):ment.start]])
         ment.sentence_average = average([x['word'] for x in curr_sentence])
     for pair in itertools.combinations(found_mentions, 2):
-        pdb.set_trace()
+
         features = []
         features.append(pair[0].first_word)
         features.append(pair[0].last_word)
@@ -144,13 +144,23 @@ def process_file(f):
 
         features.append(distance_to_onehot(abs(pair[0].sentence - pair[1].sentence)))
         features.append(distance_to_onehot(abs(found_mentions.index(pair[0]) - found_mentions.index(pair[1]))))
-        features.append(np.array(int(pair[0].start < pair[1].end and pair[1].start < pair[0].end)))
+        features.append(np.array([int(pair[0].start < pair[1].end and pair[1].start < pair[0].end)]))
 
-        coref = pair[0].mention_num == pair[1].mention_num
+        Y_VALUE = int(pair[0].mention_num == pair[1].mention_num)]
+        features.append(np.array([Y_VALUE]))
 
+        if Y_VALUE:
+            POSITIVE_XY.append(np.concatenate(features))
+        else:
+            NEGATIVE_XY.append(np.concatenate(features))
+
+
+POSITIVE_XY = []
+NEGATIVE_XY = []
 for root, _, files in os.walk('./data'):
     for f in files:
         with open(os.path.join(root,f)) as data_file:
-            if process_file(data_file):
-                print f
+            process_file(data_file, POSITIVE_XY, NEGATIVE_XY)
 
+np.save('pos_coref_data.npy', np.array(XY_MATRIX))
+np.save('neg_coref_data.npy', np.array(XY_MATRIX))

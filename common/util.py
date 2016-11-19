@@ -1,5 +1,5 @@
 from collections import defaultdict
-import numpy as np
+import autograd.numpy as np
 import json
 from sklearn.neighbors import LSHForest
 import itertools
@@ -35,7 +35,7 @@ def sigmoid(x):
 
 
 def relu(x):
-    return np.maximum(0, x)
+    return np.maximum(0.0, x)
 
 
 def concat_and_multiply(weights, *args):
