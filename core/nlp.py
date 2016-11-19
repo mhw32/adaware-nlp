@@ -15,7 +15,8 @@ sys.path.append(local_ref('../coref'))
 sys.path.append(local_ref('../dependency_parsing'))
 
 import disambiguator
-import treebank_tokenizer
+# import treebank_tokenizer
+import nltk_tokenizer
 import glove
 import nltk_lemmatizer
 import pos_tagger
@@ -25,7 +26,7 @@ import nltk_dep_parser
 
 class AdaWordTokenizer(object):
     def __init__(self):
-        self.tokenizer = treebank_tokenizer.TreeBankTokenizer()
+        self.tokenizer = nltk_tokenizer.Tokenizer()
 
     def do(self, sentence):
         ''' sentence : string, text with spaces '''
