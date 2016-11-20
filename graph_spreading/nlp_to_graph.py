@@ -71,31 +71,19 @@ class SemanticGraph(object):
             # true_token_i = absolute loc in graph
             true_token_i = offset + token_i
 
-            # add adjacency-1 links
-            if token_i > 0 and token_i < num_tokens - 1:
-                self._add_link(
-                    true_token_i,
-                    true_token_i+1,
-                    self.priors['adjacency-1'],
-                    'adjacency-1')
-                self._add_link(
-                    true_token_i,
-                    true_token_i-1,
-                    self.priors['adjacency-1'],
-                    'adjacency-1')
-
-            # add adjacency-1 links
-            if token_i > 1 and token_i < num_tokens - 2:
-                self._add_link(
-                    true_token_i,
-                    true_token_i+2,
-                    self.priors['adjacency-2'],
-                    'adjacency-2')
-                self._add_link(
-                    true_token_i,
-                    true_token_i-2,
-                    self.priors['adjacency-2'],
-                    'adjacency-2')
+            # add adjacency-1 through adjacency-3 links
+            for adj_i in [0, 1, 2]:
+                if token_i > adj_i and token_i < num_tokens - (adj_i+1):
+                    self._add_link(
+                        true_token_i,
+                        true_token_i+adj_i+1,
+                        self.priors['adjacency-{}'.format(adj_i+1)],
+                        'adjacency-{}'.format(adj_i+1))
+                    self._add_link(
+                        true_token_i,
+                        true_token_i-(adj_i+1),
+                        self.priors['adjacency-{}'.format(adj_i+1)],
+                        'adjacency-{}'.format(adj_i+1))
 
             # add lemma links
             lemma = lemmas[token_i]
@@ -113,7 +101,7 @@ class SemanticGraph(object):
                 self._add_link(
                     true_token_i,
                     pos_i,
-                    self.priors['lemma'],
+                    self.priors['pos'],
                     'pos')
             self.pos_hash[pos].append(true_token_i)
 
@@ -123,12 +111,21 @@ class SemanticGraph(object):
                 self._add_link(
                     true_token_i,
                     ner_i,
-                    self.priors['lemma'],
+                    self.priors['ner'],
                     'ner')
             self.ner_hash[ner].append(true_token_i)
 
             # add dep links
-            # TODO
+            # FIXME: for now I'm treating all dependencies
+            # the same -- definitely not okay.
+            cur_deps_dict = dep_tags[token_i].deps
+            for dep_key, dep_vals in cur_deps_dict:
+                for dep_val in dep_vals:
+                    self._add_link(
+                        true_token_i,
+                        offset + dep_val,
+                        self.priors['dependency'],
+                        'dependency-{}'.format(dep_key))
 
     def _add_link(self, i, j, prior, link_type):
         self.graph.add_edge(i, j, prior, edge_type=link_type)

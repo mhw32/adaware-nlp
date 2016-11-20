@@ -86,7 +86,7 @@ class AdaSentencePipeline(object):
                  # 'embeddings' : embeddings,
                  'pos_tags' : postags,
                  'ner_tags' : nertags,
-                 'dep_tags' : [str(d) for d in deptags],
+                 'dep_tags' : [d.nodes for d in deptags][0],
                  '_timestamp' : str(datetime.now()) }
         return resp
 
@@ -107,7 +107,7 @@ class AdaSentencePipeline(object):
                  # 'embeddings' : embeddings,
                  'pos_tags' : postags,
                  'ner_tags' : nertags,
-                 'dep_tags' : [str(d) for d in deptags],
+                 'dep_tags' : [d.nodes for d in deptags][0],
                  '_timestamp' : str(datetime.now()) }
         return resp
 
