@@ -22,3 +22,22 @@ With the ability to convert data into a knowledge graph, the summarization tool 
 - App
 	- Chrome Extension
 	- Server to store the knowledge graph (try neo4j)
+
+## semantic graph
+The semantic graph is a list of `GraphNodes` with a dictionary of edges. The edges are stored in a `defaultdict` of `defaultdict` where the inner dictionary stores edge type. For example, an edge type can be `adjacency`, indicating neighbor ondes or `coref` which connect corefering nodes.
+
+```
+defaultdict(<function graph.<lambda>>,
+            {'e_0_1': defaultdict(<function graph.<lambda>>,
+                         {'adjacency-1': 0.15, 'sentence-0': 0.05}),
+             'e_0_2': defaultdict(<function graph.<lambda>>,
+                         {'adjacency-2': 0.1, 'sentence-0': 0.05}),
+             'e_0_3': defaultdict(<function graph.<lambda>>,
+                         {'adjacency-3': 0.08, 'sentence-0': 0.05}),
+             'e_0_4': defaultdict(<function graph.<lambda>>,
+                         {'dependency-det': 1.0,
+                          'dependency-root': 1.0,
+                          'sentence-0': 0.05}),
+       	    }
+)
+```
