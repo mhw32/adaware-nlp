@@ -2,7 +2,7 @@
     of nodes with semantically related edges.
 '''
 
-from graph import GraphNode, Graph
+from graph import Graph
 from spreading import spreading_activation
 
 
@@ -17,6 +17,7 @@ def semantic_priors():
     priors['dependency'] = 1.0
     priors['sentence'] = 0.05
     return priors
+
 
 class SemanticGraph(object):
     def __init__(self):
@@ -129,3 +130,35 @@ class SemanticGraph(object):
 
     def _add_link(self, i, j, prior, link_type):
         self.graph.add_edge(i, j, prior, edge_type=link_type)
+
+
+    def run(source_list)
+        ''' list of indexes for source nodes '''
+        source_nodes = [self.graph.get_node(source_i) for source_i in source_list]
+        similar_nodes, dissimilar_nodes = spreading_activation(
+            self.graph, source_nodes)
+        return similar_nodes, dissimilar_nodes
+
+
+    def api_run(source_list):
+        similar_nodes, dissimilar_nodes = run(source_list)
+
+        similar_indexs = [node.index for node in similar_nodes]
+        similar_activation = [node.activation for node in similar_nodes]
+        similar_tokens = [node.value for node in similar_nodes]
+
+        dissimilar_tokens = [node.value for node in dissimilar_nodes]
+        dissimilar_activation = [node.activation for node in dissimilar_nodes]
+        dissimilar_tokens = [node.value for node in dissimilar_nodes]
+
+        response = {
+            '_timestamp' : str(datetime.now())
+            'similar_indexes' : similar_indexs,
+            'similar_activation' : similar_activation,
+            'similar_tokens' : similar_tokens,
+            'dissimilar_indexes' : dissimilar_indexs,
+            'dissimilar_activation' : dissimilar_activation,
+            'dissimilar_tokens' : dissimilar_tokens,
+        }
+
+        return response
