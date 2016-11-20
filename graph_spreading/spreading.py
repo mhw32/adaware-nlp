@@ -1,15 +1,16 @@
 #!/usr/bin/env python
 
-def spreading_activation(graph, origin):
+def spreading_activation(graph, origins):
 	threshold=0.5
 	decay=0.1
 
-	origin.activation = 1.0
+	for o in origins:
+		o.activation = 1.0
 	already_fired = set()
-	need_firing = set([origin])
+	need_firing = origins
 
 	while len(need_firing) > 0:
-		root = need_firing.pop()
+		root = need_firing.pop(0)
 		# skip if this node has already been activated
 		if root in already_fired:
 			continue
@@ -23,6 +24,6 @@ def spreading_activation(graph, origin):
 			n.activation = max(1.0, n.activation)
 			if n.activation >= threshold:
 				need_firing.append(n)
-		already_fired.append(root)
+		already_fired.add(root)
 
 	return already_fired, set(graph.nodes) - already_fired
