@@ -61,30 +61,39 @@ class Graph(object):
             return True
         return False
 
-    def _edge_hash(self, i, j):
+    def _edge_hash(self, i, j, edge_type=None):
+        if edge_type is None:
+            edge_type = 'vanilla'
+
         # i, j are integers
         if i <= j:
-            return 'e_{}_{}'.format(str(i), str(j))
+            return 'e_{}_{}_{}'.format(str(i), str(j), edge_type)
         else:
-            return 'e_{}_{}'.format(str(j), str(i))
+            return 'e_{}_{}_{}'.format(str(j), str(i), edge_type)
 
-    def add_edge(self, node_i, node_j, weight):
-        ''' node_i and node_j are GraphNode objects '''
-        node_i.edges.append(node_j.index)  # store index cuz cheaper
-        node_j.edges.append(node_i.index)
+    def add_edge(self, i, j, weight, edge_type=None):
+        ''' i, j are integers
+            node_i and node_j are GraphNode objects '''
+        node_i = self.get_node(index=i)
+        node_j = self.get_node(index=j)
+        node_i.edges.append(j)  # store index cuz cheaper
+        node_j.edges.append(i)
 
         # use smaller one as first hash key
-        hash_key = self._edge_hash(node_i.index, node_j.index)
+        hash_key = self._edge_hash(i, j, edge_type=edge_type)
         self.edges[hash_key] = weight
 
-    def get_edge(self, node_i, node_j):
-        ''' node_i and node_j are GraphNode objects '''
-        hash_key = self._edge_hash(node_i.index, node_j.index)
+    def get_edge(self, i, j, edge_type=None):
+        ''' i, j are integers '''
+        hash_key = self._edge_hash(i, j, edge_type)
         return self.edges[hash_key]
 
-    def del_edge(self, node_i, node_j):
-        ''' node_i and node_j are GraphNode objects '''
-        node_i.remove(node_j.index)
-        node_j.remove(node_i.index)
-        hash_key = self._edge_hash(node_i.index, node_j.index)
+    def del_edge(self, i, j, edge_type=None):
+        ''' i, j are integers
+            node_i and node_j are GraphNode objects '''
+        node_i = self.get_node(index=i)
+        node_j = self.get_node(index=j)
+        node_i.remove(j)
+        node_j.remove(i)
+        hash_key = self._edge_hash(i, j, edge_type)
         del self.edges[hash_key]

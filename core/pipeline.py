@@ -33,6 +33,7 @@ class AdaTextPipeline(object):
         sentences = self.disambiguator.do(text)
 
         resp = {}
+        resp['num_sentences'] = len(sentences)
         for i, tokens_lst in enumerate(sentences):
             sent_i_json = ada._do_tokens(tokens_lst)
             resp['sentence_{}'.format(i)] = sent_i_json
@@ -79,7 +80,8 @@ class AdaSentencePipeline(object):
         print('[{}] Running Dependency Parsing'.format(str(datetime.now())))
         deptags = self.dep_parser.do(tokens)
 
-        resp = { 'tokens' : tokens,
+        resp = { 'num_tokens' : len(tokens),
+                 'tokens' : tokens,
                  'lemmas' : lemmas,
                  # 'embeddings' : embeddings,
                  'pos_tags' : postags,
