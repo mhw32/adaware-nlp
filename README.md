@@ -23,7 +23,23 @@ With the ability to convert data into a knowledge graph, the summarization tool 
 	- Chrome Extension
 	- Server to store the knowledge graph (try neo4j)
 
-## semantic graph
+## natural language processing: AdaNLP
+A lot of Ada is using deep learning to extract semantic meaning from text data. Like CoreNLP, AdaNLP pulls information like part-of-speech, name-entity, and dependencies. These are stored in a JSON and are useful for processing later in the pipeline like creating a `SemanticGraph`.
+
+```
+{
+	'num_sentences': 0,
+	'sentence-0': {
+		'tokens': ['i', 'like', 'dogs'],
+		'lemmas': ['i', 'like', 'dog'],
+		'pos_tags': ['LS', 'IN', 'NNS'],
+		'ner_tags': ['O', 'O', 'O'],
+		'dep_tags': ...
+	}
+}
+```
+
+## semantic graph: AdaGraph
 The semantic graph is a list of `GraphNodes` with a dictionary of edges. The edges are stored in a `defaultdict` of `defaultdict` where the inner dictionary stores edge type. For example, an edge type can be `adjacency`, indicating neighbor ondes or `coref` which connect corefering nodes.
 
 ```
