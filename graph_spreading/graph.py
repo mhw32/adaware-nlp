@@ -26,9 +26,10 @@ class Graph(object):
         self.nodes = []
         self.map_name_to_index = {}
         self.num_nodes = 0
+        self.num_edges = 0
         # b/c our large graphs will be fairly sparse, we
         # use a hash instead of 2x2 array
-        self.edges = defaultdict(lambda: 0)
+        self.edges = defaultdict(lambda: defaultdict(lambda: 0))
 
     def add_node(self, name):
         ''' nodes by default have no edges '''
@@ -61,15 +62,12 @@ class Graph(object):
             return True
         return False
 
-    def _edge_hash(self, i, j, edge_type=None):
-        if edge_type is None:
-            edge_type = 'vanilla'
-
+    def _edge_hash(self, i, j):
         # i, j are integers
         if i <= j:
-            return 'e_{}_{}_{}'.format(str(i), str(j), edge_type)
+            return 'e_{}_{}'.format(str(i), str(j))
         else:
-            return 'e_{}_{}_{}'.format(str(j), str(i), edge_type)
+            return 'e_{}_{}'.format(str(j), str(i))
 
     def add_edge(self, i, j, weight, edge_type=None):
         ''' i, j are integers
@@ -80,20 +78,73 @@ class Graph(object):
         node_j.edges.append(i)
 
         # use smaller one as first hash key
-        hash_key = self._edge_hash(i, j, edge_type=edge_type)
-        self.edges[hash_key] = weight
+        hash_key = self._edge_hash(i, j)
+        self.edges[hash_key][edge_type] += weight
+        self.num_edges += 1
 
     def get_edge(self, i, j, edge_type=None):
         ''' i, j are integers '''
-        hash_key = self._edge_hash(i, j, edge_type)
+        hash_key = self._edge_hash(i, j)
+        if edge_type is not None:
+            return self.edges[hash_key][edge_type]
         return self.edges[hash_key]
 
     def del_edge(self, i, j, edge_type=None):
         ''' i, j are integers
             node_i and node_j are GraphNode objects '''
-        node_i = self.get_node(index=i)
-        node_j = self.get_node(index=j)
-        node_i.remove(j)
-        node_j.remove(i)
-        hash_key = self._edge_hash(i, j, edge_type)
-        del self.edges[hash_key]
+
+        hash_key = self._edge_hash(i, j)
+        should_remove_node = False
+
+        if edge_type is not None:
+            self.edges[hash_key][edge_type] = 0
+            if len(self.edges[hash_key].values()) == 0:
+                should_remove_node = True
+            self.num_edges -= 1
+        else:  # delete all
+            should_remove_node = True
+            self.num_edges -= len(self.edges[hash_key].keys())
+            self.edges[hash_key] = defaultdict(lambda: 0)
+
+        if should_remove_node:
+            # removes real edge
+            node_i = self.get_node(index=i)
+            node_j = self.get_node(index=j)
+            node_i.remove(j)
+            node_j.remove(i)
+
+    def spreading_activation(self, origins_i, threshold=0.5, decay=0.05):
+        ''' origins_i must be a list of integers representing indexes of
+            source nodes '''
+        origins = [self.get_node(index=node_i) for node_i in origins_i]
+
+        for o in origins:
+            o.activation = 1.0
+
+        already_fired = set()
+        need_firing = origins
+
+        while len(need_firing) > 0:
+            root = need_firing.pop(0)
+            # skip if this node has already been activated
+            if root in already_fired:
+                continue
+
+            # "fire" the node
+            for n in root.edges:
+                neighbor_node = self.get_node(index=n)
+                edge_hash = self._edge_hash(root.index, n)
+                weight = sum(self.edges[edge_hash].values())  # naive linear sum
+
+                if weight == 0:
+                    continue
+
+                neighbor_node.activation += (root.activation * weight * decay)
+                neighbor_node.activation = max(1.0, neighbor_node.activation)
+
+                if neighbor_node.activation >= threshold:
+                    need_firing.append(neighbor_node)
+
+            already_fired.add(root)
+
+        return already_fired, set(self.nodes) - already_fired

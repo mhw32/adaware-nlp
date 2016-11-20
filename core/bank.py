@@ -6,6 +6,9 @@ import dill
 from datetime import datetime
 from gensim import models
 
+sys.path.append('../models')
+import cnn
+
 
 local_ref = lambda x: os.path.join(os.path.dirname(__file__),  x)
 
