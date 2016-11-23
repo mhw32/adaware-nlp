@@ -12,9 +12,9 @@ class DependencyParser(object):
     def str_parse(self, sentence):
         ''' sentence is a string '''
         parsed = self.model.raw_parse(sentence)
-        return [p.tree() for p in parsed]
+        return [p for p in parsed]
 
     def lst_parse(self, sentence):
         ''' sentence is a list of words '''
         parsed = self.model.parse(sentence)
-        return [p.tree() for p in parsed]
+        return [p for p in parsed]
