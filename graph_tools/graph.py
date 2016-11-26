@@ -17,6 +17,7 @@ class GraphNode(object):
         self.value = value
         self.index = index
         self.activation = 0
+        self.label = 0
         # list of GraphNode objects
         self.edges = []
 
@@ -146,5 +147,4 @@ class Graph(object):
                     need_firing.append(neighbor_node)
 
             already_fired.add(root)
-
-        return already_fired, set(self.nodes) - already_fired
+            root.label = 1

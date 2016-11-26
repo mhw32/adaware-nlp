@@ -16,10 +16,10 @@ def visualize_graph(graph, savepath=None):
     G = nx.Graph()  # init network obj
 
     # add all nodes
-    node_activations = []
+    node_assignments = []
     for node in node_objs:
         G.add_node(node.value)
-        node_activations.append(node.activation)
+        node_assignments.append(node.label)
 
     for k,v in edge_hash.iteritems():
         _, nd_i, nd_j = k.split('_')
@@ -57,7 +57,7 @@ def visualize_graph(graph, savepath=None):
     nx.draw(
         G,
         pos,
-        node_color=node_activations,
+        node_color=node_assignments,
         node_size=1500,
         edge_color=edge_colors,
         edge_cmap=plt.cm.Reds
