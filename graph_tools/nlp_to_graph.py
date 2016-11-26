@@ -38,7 +38,7 @@ class SemanticGraph(object):
             parse the json into nodes and edges in the graph
         '''
         num_sentences = json['num_sentences']
-        for sent_i in range(num_json):
+        for sent_i in range(num_sentences):
             self.sent_json_to_graph(json['sentence_{}'.format(sent_i)])
 
     def sent_json_to_graph(self, json, sent_i=0):
