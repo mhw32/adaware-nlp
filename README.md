@@ -61,4 +61,4 @@ defaultdict(<function graph.<lambda>>,
 #### AdaGraph Example
 The semantic graph for the semantice: The quick brown fox jumped over the lazy dog.
 
-![AdaGraph](./example_graph.png)
+![AdaGraph](./example_graph.png =350x)
