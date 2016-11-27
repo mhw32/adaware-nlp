@@ -59,10 +59,6 @@ defaultdict(<function graph.<lambda>>,
 ```
 
 #### AdaGraph Example
-The semantic graph for the semantice: The quick brown fox jumped over the lazy dog.
+The semantic graph for the sentence: The quick brown fox jumped over the lazy dog.
 
-<div style='text-align: center; margin: 0 auto;'>
-    <img src="./example_graph.png" width="50%">
-</div>
-
-
+<img src="./example_graph.png" width="50%">
