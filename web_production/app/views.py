@@ -11,15 +11,21 @@ from bank import ParamBank
 from pipeline import AdaTextPipeline
 
 
-pbank = ParamBank()
-pbank.load()
-pipe = AdaTextPipeline(pbank)
+# pbank = ParamBank()
+# pbank.load()
+# pipe = AdaTextPipeline(pbank)
 
-
-@app.route('/', methods = ['POST', 'GET'])
+@app.route('/', methods = ['GET'])
 def index():
-    return render_template("index.html")
+    return render_template('index.html')
 
+@app.route('/core', methods = ['POST', 'GET'])
+def core():
+    return render_template('core.html')
+
+@app.route('/graph', methods = ['POST', 'GET'])
+def graph():
+    return render_template('graph.html')
 
 @app.route('/evaluate_text', methods=['GET'])
 def evaluate_text():

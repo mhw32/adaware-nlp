@@ -7,7 +7,7 @@
         <meta name="description" content="">
         <meta name="author" content="">
         <link rel="icon" href="/static/css/favicon.ico">
-        <title>AdaNLP</title>
+        <title>AdaGraph</title>
         <!-- favicon -->
         <link rel='shortcut icon' href='/static/images/favicon.png' type='image/x-icon'/ >
         <!-- bootstrap -->
@@ -17,32 +17,18 @@
         <link href="https://fonts.googleapis.com/css?family=Roboto" rel="stylesheet">
         <!-- jquery -->
         <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
-
-        <script type=text/javascript>
-            $(function() {
-                $('button#evaluate_bind').bind('click', function() {
-                    $.getJSON('/evaluate_text', {
-                        input_str : $('#evaluate_input').val()
-                    }, function(data) {
-                        console.log(data);
-                        $("#evaluate_response").text(data.result);
-                    });
-                    return false;
-                });
-            });
-        </script>
     </head>
     <body>
         <div class="wrapper">
             <header id="header" class="alt">
-                <h1>AdaNLP</h1>
-                <p><b>A suite of deep learning NLP tools</b></p>
+                <h1>AdaGraph</h1>
+                <p><b>A suite of graphical modeling tools</b></p>
             </header>
             <div class="ada-section about-section">
                 <h3>About</h3>
-                <p>AdaNLP provides a set of natural language processing tools built on neural network models. For example, AdaNLP has tooling to derive base forms of words, parts of speech, name-entity recognition, co-references <b>(coming soon!)</b>, and semantic dependencies within text.</p>
+                <p>Adagraph translates a body of text into a graph of nodes and edges where a node represents a token or phrase and an edge represents a non-linear combination of semantic relations learned through a feedforward network on top of AdaNLP tags.</p>
 
-                <p>AdaNLP was inspired by Stanford CoreNLP and created as a learning exercise as well as an attempt to use only deep learning architectures to compete with the graphical models commonly used in NLP. Each part of AdaNLP was tested on the Brown/WallStreet dataset and achieved state-of-the-art AUC and ACC scores.</p>
+                <p>AdaGraph is inspired by multi-document summarization methods, like the ones presented in this <a href='http://lkm.fri.uni-lj.si/xaigor/eng/scipaper/AASummarization.pdf'>paper</a>. Through spreading, AdaGraph learns similar and dissimilar segments of the semantic web. We are hopeful that these methods scale from single-document parsing to thousands of documents.</p>
             </div>
 
             <div class="ada-section demo-query-section">
@@ -61,15 +47,11 @@
 
             <div class="ada-section api-section">
                 <h3>API</h3>
-                <p>Coming Soon! An executable of Ada's API will be downloadable soon.</p>
+                <p>Coming Soon! An executable of AdaGraph's API will be downloadable soon.</p>
             </div>
             <div class="license-section">
                 <h3>License</h3>
-                <p>AdaNLP is licensed under the <a href="https://opensource.org/licenses/MIT">MIT License</a>. For commerical licensing, please contact us.</p>
-            </div>
-            <div class="ada-section contact-section">
-                <h3>Contact</h3>
-                <p>AdaNLP is the brain child of <a href="http://jchang.me/">Jonathan Chang</a>, the full stack engineer at Celena.<p>
+                <p>AdaGraph is licensed under the <a href="https://opensource.org/licenses/MIT">MIT License</a>. For commerical licensing, please contact us.</p>
             </div>
         </div>
         <footer>

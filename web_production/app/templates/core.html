@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="description" content="">
+        <meta name="author" content="">
+        <link rel="icon" href="/static/css/favicon.ico">
+        <title>AdaNLP</title>
+        <!-- favicon -->
+        <link rel='shortcut icon' href='/static/images/favicon.png' type='image/x-icon'/ >
+        <!-- bootstrap -->
+        <link href="/static/css/bootstrap.min.css" rel="stylesheet">
+        <link href="/static/css/core.css" rel="stylesheet">
+        <!-- fonts -->
+        <link href="https://fonts.googleapis.com/css?family=Roboto" rel="stylesheet">
+        <!-- jquery -->
+        <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+
+        <script type=text/javascript>
+            $(function() {
+                $('button#evaluate_bind').bind('click', function() {
+                    $.getJSON('/evaluate_text', {
+                        input_str : $('#evaluate_input').val()
+                    }, function(data) {
+                        console.log(data);
+                        $("#evaluate_response").text(data.result);
+                    });
+                    return false;
+                });
+            });
+        </script>
+    </head>
+    <body>
+        <div class="wrapper">
+            <header id="header" class="alt">
+                <h1>AdaNLP</h1>
+                <p><b>A suite of deep learning NLP tools</b></p>
+            </header>
+            <div class="ada-section about-section">
+                <h3>About</h3>
+                <p>AdaNLP provides a set of natural language processing tools built on neural network models. For example, AdaNLP has tooling to derive base forms of words, parts of speech, name-entity recognition, co-references <b>(coming soon!)</b>, and semantic dependencies within text.</p>
+
+                <p>AdaNLP was inspired by Stanford CoreNLP and created as a learning exercise as well as an attempt to use only deep learning architectures to compete with the graphical models commonly used in NLP. Each part of AdaNLP was tested on the Brown/WallStreet dataset and achieved state-of-the-art AUC and ACC scores.</p>
+            </div>
+
+            <div class="ada-section demo-query-section">
+                <h3>Demo</h3>
+                <textarea type="text" name="inputtext" placeholder="e.g., The quick brown fox jumped over the lazy dog." id="evaluate_input" class="form-control" autofocus></textarea>
+            </div>
+
+            <div class="ada-section demo-button-section">
+                <button type="submit" class="btn btn-primary btn-block" id="evaluate_bind">Go Ada</button>
+            </div>
+
+            <div class="ada-section demo-response-section">
+                <p><b>Result:</b></p>
+                <p id="evaluate_response">None</p>
+            </div>
+
+            <div class="ada-section api-section">
+                <h3>API</h3>
+                <p>Coming Soon! An executable of AdaNLP's API will be downloadable soon.</p>
+            </div>
+            <div class="license-section">
+                <h3>License</h3>
+                <p>AdaNLP is licensed under the <a href="https://opensource.org/licenses/MIT">MIT License</a>. For commerical licensing, please contact us.</p>
+            </div>
+        </div>
+        <footer>
+          <section class="footersection">
+            <div class="title">
+              <h2>Ada</h2>
+              Artificial intelligence for the semantic web.
+            </div>
+
+            <div class="copyline">
+              Copyright &copy; 2016 Ada.
+            </div>
+          </section>
+        </footer>
+    </body>
+</html>
