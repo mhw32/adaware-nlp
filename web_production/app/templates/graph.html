@@ -17,6 +17,20 @@
         <link href="https://fonts.googleapis.com/css?family=Roboto" rel="stylesheet">
         <!-- jquery -->
         <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+
+        <script type=text/javascript>
+            $(function() {
+                $('button#evaluate_bind').bind('click', function() {
+                    $.getJSON('/evaluate_graph', {
+                        input_str : $('#evaluate_input').val()
+                    }, function(data) {
+                        console.log(data);
+                        $("#evaluate_response").html('<img src="{}" alt="AdaGraph">'.format(data.result));
+                    });
+                    return false;
+                });
+            });
+        </script>
     </head>
     <body>
         <div class="wrapper">
