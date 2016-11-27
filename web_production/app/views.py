@@ -50,11 +50,15 @@ def evaluate_graph():
         if num_sample == 0:
             num_sample += 1
         source_list = np.random.choice(range(num_nodes), num_sample)
+
+        print('[{}] Spreading AdaGraph.'.format(str(datetime.now())))
         sgraph.graph.spreading_activation(source_list)
 
         # visualize the graph (return path to saved file)
-        graph_viz(sgraph.graph, 'tmp/adagraph_output.png')
-        return jsonify(result='tmp/adagraph_output.png')
+        print('[{}] Generating AdaGraph PNG.'.format(str(datetime.now())))
+        out_png_file = 'tmp/adagraph_output.png'
+        graph_viz(sgraph.graph, out_png_file)
+        return jsonify(result=out_png_file)
 
     return jsonify(result='None')
 
