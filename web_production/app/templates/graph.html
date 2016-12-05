@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="description" content="">
+        <meta name="author" content="">
+        <link rel="icon" href="/static/css/favicon.ico">
+        <title>AdaGraph</title>
+        <!-- favicon -->
+        <link rel='shortcut icon' href='/static/images/favicon.png' type='image/x-icon'/ >
+        <!-- bootstrap -->
+        <link href="/static/css/bootstrap.min.css" rel="stylesheet">
+        <link href="/static/css/core.css" rel="stylesheet">
+        <!-- fonts -->
+        <link href="https://fonts.googleapis.com/css?family=Roboto" rel="stylesheet">
+        <!-- jquery -->
+        <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+
+        <script type=text/javascript>
+            $(function() {
+                $('button#evaluate_bind').bind('click', function() {
+                    $.getJSON('/evaluate_graph', {
+                        input_str : $('#evaluate_input').val()
+                    }, function(data) {
+                        console.log(data);
+                        $("#evaluate_response").html('<img src="{}" alt="AdaGraph">'.format(data.result));
+                    });
+                    return false;
+                });
+            });
+        </script>
+    </head>
+    <body>
+        <div class="wrapper">
+            <header id="header" class="alt">
+                <h1>AdaGraph</h1>
+                <p><b>A suite of graphical modeling tools</b></p>
+            </header>
+            <div class="ada-section about-section">
+                <h3>About</h3>
+                <p>Adagraph translates a body of text into a graph of nodes and edges where a node represents a token or phrase and an edge represents a non-linear combination of semantic relations learned through a feedforward network on top of AdaNLP tags.</p>
+
+                <p>AdaGraph is inspired by multi-document summarization methods, like the ones presented in this <a href='http://lkm.fri.uni-lj.si/xaigor/eng/scipaper/AASummarization.pdf'>paper</a>. Through spreading, AdaGraph learns similar and dissimilar segments of the semantic web. We are hopeful that these methods scale from batch-document parsing to thousands of documents.</p>
+            </div>
+
+            <div class="ada-section demo-query-section">
+                <h3>Demo</h3>
+                <textarea type="text" name="inputtext" placeholder="e.g., The quick brown fox jumped over the lazy dog." id="evaluate_input" class="form-control" autofocus></textarea>
+            </div>
+
+            <div class="ada-section demo-button-section">
+                <button type="submit" class="btn btn-primary btn-block" id="evaluate_bind">Go Ada</button>
+            </div>
+
+            <div class="ada-section demo-response-section">
+                <p><b>Result:</b></p>
+                <p id="evaluate_response">None</p>
+            </div>
+
+            <div class="ada-section api-section">
+                <h3>API</h3>
+                <p>Coming Soon! An executable of AdaGraph's API will be downloadable soon.</p>
+            </div>
+            <div class="license-section">
+                <h3>License</h3>
+                <p>AdaGraph is licensed under the <a href="https://opensource.org/licenses/MIT">MIT License</a>. For commerical licensing, please contact us.</p>
+            </div>
+        </div>
+        <footer>
+          <section class="footersection">
+            <div class="title">
+              <h2>Ada</h2>
+              Artificial intelligence for the semantic web.
+            </div>
+
+            <div class="copyline">
+              Copyright &copy; 2016 Ada.
+            </div>
+          </section>
+        </footer>
+    </body>
+</html>
