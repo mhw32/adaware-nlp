@@ -24,6 +24,77 @@ h1, h2, h3, h4, p {
 }
 
 
+/* Search Bar CSS */
+
+.ada-question-wrapper {
+    background-color: #ed145a;
+    color: white;
+    text-align: left;
+    font-size: 16px;
+    padding: 10px;
+    margin-top: 10px;
+    margin-bottom: 10px;
+}
+
+.ada-response-wrapper {
+    text-align: left;
+    font-size: 16px;
+    padding: 10px;
+    border: 1px solid lightgrey;
+    margin-top: 10px;
+    margin-bottom: 10px;
+}
+
+.ada-search-wrapper {
+    padding-top: 20px;
+    padding-bottom: 20px;
+}
+
+#ada-search-bar {
+    height: 44px;
+    padding: 10px;
+    width: 70%;
+    max-width: 600px;
+    font-size: 18px;
+}
+
+#ada-search-button {
+    background-color: #ed145a;
+    border: none;
+    color: white;
+    padding: 10px 15px;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+    font-size: 16px;
+}
+
+#ada-search-text {
+    color: gray;
+}
+
+#ada-search-text a {
+    color: #ed145a;
+}
+
+.ada-convo-list {
+    margin-top: 20px;
+    margin-bottom: 20px;
+    max-width: 700px;
+    width: 80%;
+    text-align: center;
+    margin: 0 auto;
+    padding-top: 20px;
+}
+
+.ada-convo-list p {
+    margin-bottom: 0;
+}
+
+.ada-hidden {
+    display:none;
+}
+
 /* Footer CSS */
 
 footer h2 {

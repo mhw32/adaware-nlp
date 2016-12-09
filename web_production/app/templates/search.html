@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="description" content="">
+        <meta name="author" content="">
+        <link rel="icon" href="/static/css/favicon.ico">
+        <title>AdaSearch</title>
+        <!-- favicon -->
+        <link rel='shortcut icon' href='/static/images/favicon.png' type='image/x-icon'/ >
+        <!-- bootstrap -->
+        <link href="/static/css/bootstrap.min.css" rel="stylesheet">
+        <link href="/static/css/core.css" rel="stylesheet">
+        <!-- fonts -->
+        <link href="https://fonts.googleapis.com/css?family=Roboto" rel="stylesheet">
+        <!-- jquery -->
+        <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+    </head>
+    <body>
+        <div class="wrapper" style="min-height: 485px; padding-top: 125px;">
+            <header id="header" class="alt">
+                <div class="ada-section" style='text-align: center;'>
+                    <img src="/static/images/favicon.png" alt="favicon" style="width:100px;height:100px;">
+                    <h1>AdaSearch</h1>
+                </div>
+            </header>
+
+            <!-- ADA QUESTION -->
+            <div class="ada-section ada-convo-list" style='text-align: center;'>
+                <div class="ada-question-wrapper ada-hidden" id="ada-question-scaffold">
+                    <div class="ada-question">
+                        <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit?</p>
+                    </div>
+                </div>
+
+                <!-- ADA RESPONSE -->
+                <div class="ada-response-wrapper ada-hidden" id="ada-response-scaffold">
+                    <div class="ada-response">
+                        <p>Maecenas vestibulum mollis placerat. Ut nulla est, cursus quis accumsan non, finibus eget lectus. Quisque commodo lacinia arcu at hendrerit. Sed congue nibh velit. Nam nec lorem ut risus varius fringilla. Nulla in semper mi, at scelerisque eros. Phasellus tortor eros, congue eu ligula sed, auctor rhoncus purus.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="ada-section" style='text-align: center;'>
+                <div class="ada-search-wrapper">
+                    <input type="text" id="ada-search-bar" placeholder="What do you want to know?" size="100" />
+                    <button id="ada-search-button">Go</button>
+                </div>
+                <div id="ada-search-text">
+                    <p>The search engine that talks with you. <a href='/'>Learn More</a>.</p>
+                </div>
+            </div>
+        </div>
+        <footer>
+          <section class="footersection">
+            <div class="title">
+              <h2>Ada</h2>
+              Artificial intelligence for the semantic web.
+            </div>
+
+            <div class="copyline">
+              Copyright &copy; 2016 Ada.
+            </div>
+          </section>
+        </footer>
+    </body>
+    <script>
+        var question_count = 0;
+        $('#ada-search-button').click(function() {
+            var user_input = $('#ada-search-bar').val();
+            if (user_input.length > 0) {
+                // add a new question
+                var qclone = $('#ada-question-scaffold').clone();
+                qclone.attr('id', 'ada-question-'+question_count);
+                qclone.children().html('<p>'+user_input+'</p>');
+                qclone.appendTo(".ada-convo-list");
+                qclone.removeClass("ada-hidden");
+
+                // add a new answer
+                var rclone = $('#ada-response-scaffold').clone();
+                rclone.attr('id', 'ada-response-'+question_count);
+                rclone.appendTo(".ada-convo-list");
+                rclone.removeClass("ada-hidden");
+            }
+            question_count += 1;
+        });
+    </script>
+</html>

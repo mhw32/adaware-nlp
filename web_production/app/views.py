@@ -19,17 +19,26 @@ from graph_viz import visualize_graph
 # pipe = AdaTextPipeline(pbank)
 # sgraph = SemanticGraph()
 
+
 @app.route('/', methods = ['GET'])
 def index():
     return render_template('index.html')
+
 
 @app.route('/core', methods = ['POST', 'GET'])
 def core():
     return render_template('core.html')
 
+
 @app.route('/graph', methods = ['POST', 'GET'])
 def graph():
     return render_template('graph.html')
+
+
+@app.route('/search', methods = ['POST', 'GET'])
+def search():
+    return render_template('search.html')
+
 
 @app.route('/evalute_graph', methods=['GET'])
 def evaluate_graph():
@@ -61,6 +70,7 @@ def evaluate_graph():
         return jsonify(result=out_png_file)
 
     return jsonify(result='None')
+
 
 @app.route('/evaluate_text', methods=['GET'])
 def evaluate_text():
